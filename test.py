@@ -48,6 +48,7 @@ FLAGS = flags.FLAGS
 def main(_):
     with tf.Session() as sess:
         model = DMN(FLAGS, None)
+        sess.run(tf.global_variables_initializer())
 
 if __name__ == '__main__':
     tf.app.run()

@@ -11,9 +11,9 @@ class AttentionGRU:
 		self.input_dim = input_dim
 
 	def __call__(self, inputs, state, attention):
-		with tf.name_scope('AttentionGRU'):
-			r = tf.nn.sigmoid(self.linear(inputs, state, name='_r', bias_default=1.0))
-			h = tf.nn.tanh(self.linear(inputs, r * state, name='_h'))
+		with tf.name_scope('Attention_GRU'):
+			r = tf.nn.sigmoid(self.linear(inputs, state, name='r', bias_default=1.0))
+			h = tf.nn.tanh(self.linear(inputs, r * state, name='h'))
 			new_h = attention * h + (1 - attention) * state
 		return new_h
 
@@ -42,7 +42,7 @@ class EpisodeMemory:
 	def update(self, memory):
 		state = self.init_state()
 		gs = self.attention(self.facts, memory)
-		with tf.variable_scope('AttnGate') as scope:
+		with tf.variable_scope('Attention_Gate') as scope:
 			for f, g in zip(self.facts, gs):
 				state = self.gru(f, state, g)
 				scope.reuse_variables()
@@ -84,13 +84,15 @@ class DMN(BaseModel):
 		optimizer = tf.train.AdamOptimizer()
 		self.step = optimizer.minimize(total_loss, global_step=self.global_step)
 
+		for variable in tf.trainable_variables():
+			print(variable.name, variable.get_shape())
+
 	def build_input(self):
 		input_unpack = tf.unstack(self.input, axis=1)
 		facts_unpack = []
 		with tf.variable_scope('Input_Embedding') as scope:
 			for f in input_unpack:
-				facts_unpack.append(
-					fully_connected(f, self.params.hidden_dim, name='Facts_embedding', activation='tanh', bn=False))
+				facts_unpack.append(fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
 				scope.reuse_variables()
 		return tf.stack(facts_unpack, axis=1)
 
@@ -106,7 +108,12 @@ class DMN(BaseModel):
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
 			for t in range(self.params.memory_step):
-				memory = gru(episode.update(memory), memory)[0]
+				if self.params.memory_update == 'gru':
+					memory = gru(episode.update(memory), memory)[0]
+				else:
+					c = episode.update(memory)
+					with tf.variable_scope(scope, reuse=False):
+						memory = fully_connected(tf.concat(1, [memory, c, question]), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
 				scope.reuse_variables()
 		return memory
 
