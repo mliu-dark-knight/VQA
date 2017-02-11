@@ -1,8 +1,6 @@
 import sys
-
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm
 
 
 class BaseModel(object):

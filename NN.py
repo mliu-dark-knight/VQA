@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def weight(name, shape, init='he', range=None):
+def weight(name, shape, init='he'):
     assert init == 'he' and len(shape) == 2
     std = math.sqrt(2.0 / shape[0])
     initializer = tf.random_normal_initializer(stddev=std)
@@ -46,8 +46,8 @@ def flatten(x):
 
 def fully_connected(input, num_neurons, name, activation='relu', bn=True):
     func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh}
-    W = weight(name + '_w', [num_neurons, input_dim], init='he')
-    l = tf.matmul(W, input) + bias(name + '_b', num_neurons)
+    W = weight(name + '_W', [input.get_shape().as_list()[1], num_neurons], init='he')
+    l = tf.matmul(input, W) + bias(name + '_b', num_neurons)
     if bn:
         l = batch_norm(l)
     return func[activation](l)

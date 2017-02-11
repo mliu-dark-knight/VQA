@@ -110,7 +110,7 @@ def load_glove(dim):
     """
     word2vec = {}
 
-    path = "data/glove/glove.6B." + str(dim) + 'd'
+    path = "VQA/PythonHelperTools/glove.6B/glove.6B." + str(dim) + 'd'
     if os.path.exists(path + '.cache'):
         with open(path + '.cache', 'rb') as cache_file:
             word2vec = pickle.load(cache_file)
