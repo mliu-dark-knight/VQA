@@ -49,6 +49,7 @@ def main(_):
     with tf.Session() as sess:
         model = DMN(FLAGS, None)
         sess.run(tf.global_variables_initializer())
+        summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
 
 if __name__ == '__main__':
     tf.app.run()

@@ -15,6 +15,8 @@ class BaseModel(object):
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
             self.build()
             self.saver = tf.train.Saver()
+            self.merged_summary_op = tf.summary.merge_all()
+
 
     def build(self):
         raise NotImplementedError()

@@ -75,6 +75,7 @@ class DMN(BaseModel):
 			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, self.answer)
 			loss = tf.reduce_mean(cross_entropy)
 			total_loss = loss + tf.add_n(tf.get_collection('l2'))
+			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
 			predicts = tf.cast(tf.argmax(logits, 1), 'int32')
@@ -84,8 +85,8 @@ class DMN(BaseModel):
 		optimizer = tf.train.AdamOptimizer()
 		self.step = optimizer.minimize(total_loss, global_step=self.global_step)
 
-		for variable in tf.trainable_variables():
-			print(variable.name, variable.get_shape())
+		# for variable in tf.trainable_variables():
+		# 	print(variable.name, variable.get_shape())
 
 	def build_input(self):
 		input_unpack = tf.unstack(self.input, axis=1)
