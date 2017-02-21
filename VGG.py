@@ -190,14 +190,15 @@ class VGG16:
 
 if __name__ == '__main__':
 	sess = tf.Session()
-	imgs = tf.placeholder(tf.float32, [None, 480, 640, 3])
-	vgg = VGG16(imgs, 'VGG16.npz', sess)
+	imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
+	vgg = VGG16(imgs, 'model/VGG16.npz', sess)
 
-	img_dir = 'data/VQA/val2014/'
-	feature_dir = 'data/VQA/Feature_Val/'
+	img_dir = 'VQA/Images/mscoco/val2014/'
+	feature_dir = 'VQA/Features/mscoco/val2014/'
+	if not os.path.exists(feature_dir):
+		os.makedirs(feature_dir)
 	for filename in os.listdir(img_dir):
-		img = imread(img_dir + filename, mode='RGB')
-		if img.shape == (480, 640, 3):
-			feature = sess.run(vgg.pool5, feed_dict={vgg.imgs: [img]})[0]
-			np.savez(feature_dir + filename, feature)
+		img = imresize(imread(img_dir + filename, mode='RGB'), (224, 224, 3), 'bicubic')
+		feature = sess.run(vgg.pool5, feed_dict={vgg.imgs: [img]})[0]
+		np.savez(feature_dir + filename, feature)
 

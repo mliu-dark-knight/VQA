@@ -84,8 +84,8 @@ class DMN(BaseModel):
 		optimizer = tf.train.AdamOptimizer()
 		self.step = optimizer.minimize(total_loss, global_step=self.global_step)
 
-		# for variable in tf.trainable_variables():
-		# 	print(variable.name, variable.get_shape())
+		for variable in tf.trainable_variables():
+			print(variable.name, variable.get_shape())
 
 	def build_input(self):
 		input_unpack = tf.unstack(self.input, axis=1)
