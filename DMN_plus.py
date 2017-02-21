@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops import rnn, rnn_cell
+from tensorflow.python.ops import rnn
 from DMN import BaseModel
 from NN import *
 
@@ -93,18 +93,18 @@ class DMN(BaseModel):
 		facts_unpack = []
 		with tf.variable_scope('Input_Embedding') as scope:
 			for f in input_unpack:
-				facts_unpack.append(fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
+				facts_unpack.append(tf.contrib.layers.fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
 				scope.reuse_variables()
 		return tf.stack(facts_unpack, axis=1)
 
 	def build_question(self):
 		with tf.name_scope('Question_Embedding') as scope:
-			gru = rnn_cell.GRUCell(self.params.hidden_dim)
-			question_vecs, _ = rnn.rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
+			gru = tf.nn.rnn_cell.GRUCell(self.params.hidden_dim)
+			question_vecs, _ = rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
 		return question_vecs[-1]
 
 	def build_memory(self, question, facts):
-		gru = rnn_cell.GRUCell(self.params.hidden_dim)
+		gru = tf.nn.rnn_cell.GRUCell(self.params.hidden_dim)
 		with tf.variable_scope('Memory') as scope:
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
@@ -114,7 +114,7 @@ class DMN(BaseModel):
 				else:
 					c = episode.update(memory)
 					with tf.variable_scope(scope, reuse=False):
-						memory = fully_connected(tf.concat(1, [memory, c, question]), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
+						memory = tf.contrib.layers.fully_connected(tf.concat(1, [memory, c, question]), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
 				scope.reuse_variables()
 		return memory
 

@@ -2,7 +2,6 @@
 import os
 
 import tensorflow as tf
-
 from read_data import read_babi, get_max_sizes
 from utils.data_utils import load_glove, WordTable
 
