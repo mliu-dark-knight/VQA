@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops import rnn
 from DMN import BaseModel
 from NN import *
 
@@ -53,7 +52,7 @@ class EpisodeMemory:
 			q = self.question
 			Z = []
 			for f in fs:
-				z = tf.concat(1, [f * q, f * m, tf.abs(f - q), tf.abs(f - m)])
+				z = tf.concat([f * q, f * m, tf.abs(f - q), tf.abs(f - m)], 1)
 				Z.append(tf.matmul(tf.nn.tanh(tf.matmul(z, self.W1) + self.b1), self.W2) + self.b2)
 			g = tf.nn.softmax(tf.stack(Z, axis=1))
 		return tf.unstack(g, axis=1)
@@ -63,7 +62,7 @@ class EpisodeMemory:
 class DMN(BaseModel):
 	def build(self):
 		self.input = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.img_size, self.params.channel_dim])
-		self.question = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.max_ques_size, self.params.glove_dim])
+		self.question = tf.placeholder(tf.float32, shape=[self.params.batch_size, None, self.params.glove_dim])
 		self.answer = tf.placeholder(tf.int32, shape=[self.params.batch_size], name='y')
 
 		facts = self.build_input()
@@ -72,7 +71,7 @@ class DMN(BaseModel):
 		logits = self.build_logits(memory)
 
 		with tf.name_scope('Loss'):
-			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, self.answer)
+			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer, logits=logits)
 			loss = tf.reduce_mean(cross_entropy)
 			total_loss = loss + tf.add_n(tf.get_collection('l2'))
 			# tf.summary.scalar('Cross_Entropy', loss)
@@ -93,18 +92,18 @@ class DMN(BaseModel):
 		facts_unpack = []
 		with tf.variable_scope('Input_Embedding') as scope:
 			for f in input_unpack:
-				facts_unpack.append(tf.contrib.layers.fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
+				facts_unpack.append(fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
 				scope.reuse_variables()
 		return tf.stack(facts_unpack, axis=1)
 
 	def build_question(self):
 		with tf.name_scope('Question_Embedding') as scope:
-			gru = tf.nn.rnn_cell.GRUCell(self.params.hidden_dim)
-			question_vecs, _ = rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
+			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
+			question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
 		return question_vecs[-1]
 
 	def build_memory(self, question, facts):
-		gru = tf.nn.rnn_cell.GRUCell(self.params.hidden_dim)
+		gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 		with tf.variable_scope('Memory') as scope:
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
@@ -114,13 +113,14 @@ class DMN(BaseModel):
 				else:
 					c = episode.update(memory)
 					with tf.variable_scope(scope, reuse=False):
-						memory = tf.contrib.layers.fully_connected(tf.concat(1, [memory, c, question]), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
+						memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
 				scope.reuse_variables()
 		return memory
 
 	def build_logits(self, memory):
 		with tf.name_scope('Answer'):
 			W = weight('Answer_W', [self.params.hidden_dim, self.params.vocab_size])
-		return tf.matmul(memory, W)
+			b = bias('Answer_b', self.params.vocab_size)
+		return tf.matmul(memory, W) + b
 
 

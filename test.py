@@ -30,7 +30,7 @@ flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size, delete this line du
 flags.DEFINE_integer('embed_size', 80, 'Word embedding size - Used in dmn+, dmn_embed [80]')
 flags.DEFINE_integer('hidden_dim', 80, 'Size of hidden units [80]')
 flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
-flags.DEFINE_integer('img_size', 15 * 20, 'Image feature size')
+flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
 flags.DEFINE_integer('max_ques_size', 20, 'Max length of question')
 
 # train hyperparameters
