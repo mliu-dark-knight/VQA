@@ -98,14 +98,18 @@ class DMN(BaseModel):
 	def build_question(self):
 		with tf.name_scope('Question_Embedding') as scope:
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
-			question_vecs, _ = tf.contrib.rnn.static_rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
+			if self.params.dynamic_rnn:
+				question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
+			else:
+				question_vecs, _ = tf.contrib.rnn.dynamic_rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
 		return question_vecs
 
 	def build_memory(self, questions, facts):
 		gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 		with tf.variable_scope('Memory') as scope:
 			question = tf.identity(questions[-1])
-			questions = tf.stack(questions, axis=1)
+			if not self.params.dynamic_rnn:
+				questions = tf.stack(questions, axis=1)
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
 			for t in range(self.params.memory_step):

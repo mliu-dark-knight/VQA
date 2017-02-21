@@ -32,7 +32,8 @@ flags.DEFINE_integer('hidden_dim', 80, 'Size of hidden units [80]')
 flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
 flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
 flags.DEFINE_integer('question_coattention', True, 'Use question coattention')
-flags.DEFINE_integer('max_ques_size', 10, 'Max length of question, [None] for dynamic rnn')
+flags.DEFINE_integer('dynamic_rnn', True, 'Use dynamic rnn')
+flags.DEFINE_integer('max_ques_size', None, 'Max length of question, [None] for dynamic rnn')
 
 # train hyperparameters
 flags.DEFINE_float('weight_decay', 0.001, 'Weight decay - 0 to turn off L2 regularization [0.001]')
