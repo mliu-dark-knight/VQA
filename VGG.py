@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import tensorflow as tf
 import numpy as np
@@ -185,7 +186,7 @@ class VGG16:
 		for i, k in enumerate(keys):
 			if i == len(self.parameters):
 				break
-			print i, k, np.shape(weights[k])
+			print(i, k, np.shape(weights[k]))
 			sess.run(self.parameters[i].assign(weights[k]))
 
 if __name__ == '__main__':

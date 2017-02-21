@@ -1,6 +1,5 @@
 import math
 import tensorflow as tf
-import numpy as np
 
 
 def weight(name, shape, init='he'):
