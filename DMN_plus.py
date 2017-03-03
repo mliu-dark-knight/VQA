@@ -113,15 +113,22 @@ class DMN(BaseModel):
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
 			for t in range(self.params.memory_step):
-				if self.params.memory_update == 'gru':
-					memory = gru(episode.update(memory), memory)[0]
+				if self.params.episode_memory:
+					if self.params.memory_update == 'gru':
+						memory = gru(episode.update(memory), memory)[0]
+					else:
+						c = episode.update(memory)
+						with tf.variable_scope(scope, reuse=False):
+							memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
 				else:
-					c = episode.update(memory)
-					with tf.variable_scope(scope, reuse=False):
-						memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
-				h = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention', activation='tanh')
-				a = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h, axis=2), dim=0)
-				question = tf.transpose(tf.reduce_mean(tf.transpose(questions, perm=[2, 1, 0]) * a, axis=1))
+					h_v = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'MemoryUpdate', activation='tanh')
+					a_v = tf.nn.softmax(tf.reduce_sum(tf.transpose(facts, perm=[1, 0, 2]) * h_v, axis=2), dim=0)
+					memory = tf.transpose(tf.reduce_mean(tf.transpose(facts, perm=[2, 1, 0]) * a_v, axis=1))
+
+				if self.params.question_coattention:
+					h_q = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention', activation='tanh')
+					a_q = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h_q, axis=2), dim=0)
+					question = tf.transpose(tf.reduce_mean(tf.transpose(questions, perm=[2, 1, 0]) * a_q, axis=1))
 
 				scope.reuse_variables()
 		return memory
