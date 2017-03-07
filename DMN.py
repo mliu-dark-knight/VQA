@@ -1,7 +1,7 @@
 import sys
-import tqdm
 import numpy as np
 import tensorflow as tf
+from tqdm import tqdm
 
 
 class BaseModel(object):
@@ -35,21 +35,28 @@ class BaseModel(object):
 
     def test_batch(self, sess, batch):
         feed_dict = self.get_feed_dict(batch, sess)
-        return sess.run([self.accuracy, self.total_loss], feed_dict=feed_dict)
+        return sess.run([self.predicts, self.accuracy], feed_dict=feed_dict)
 
     def train(self, sess, train_data):
-        for epoch in range(self.params.num_epochs):
-            for step in range(self.params.num_steps):
+        for epoch in tqdm(range(self.params.num_epochs), desc='Epoch', maxinterval=10000, ncols=100):
+            for step in tqdm(range(self.params.num_steps), desc='Step', maxinterval=10000, ncols=100):
                 batch = train_data.next_batch()
-                self.train_batch(sess, batch)
+                self.train_batch(sess, batch[1:])
 
-            batch = train_data.next_batch()
-            accuracy, _ = self.test_batch(sess, batch)
-            print('Accuracy: %f' % accuracy)
+            self.eval(sess, train_data)
             if epoch % self.params.save_period == 0:
                 self.save(sess)
 
         print('Training complete.')
+
+    def eval(self, sess, eval_data):
+        batch = eval_data.next_batch()
+        predicts, accuracy = self.test_batch(sess, batch[1:])
+        (Anns, Is, _, _, _) = batch
+        for predict, Ann, I in zip(predicts, Anns, Is):
+            eval_data.visualize(Ann, I)
+            tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
+        tqdm.write('Accuracy: %f' % accuracy)
 
     def save(self, sess):
         print('Saving model to %s' % self.save_dir)

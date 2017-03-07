@@ -12,9 +12,9 @@ flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
 flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing [128]')
-flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
+flags.DEFINE_integer('dataset_size', None, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training [256]')
-flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
+flags.DEFINE_integer('num_steps', 100, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model? [False]')
 flags.DEFINE_integer('save_period', 80, 'Save period [80]')
 
@@ -30,7 +30,7 @@ flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
 flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
 flags.DEFINE_bool('episode_memory', False, 'Use episode memory')
 flags.DEFINE_bool('question_coattention', True, 'Use question coattention')
-flags.DEFINE_integer('max_ques_size', 10, 'Max length of question, [None] for dynamic rnn')
+flags.DEFINE_integer('max_ques_size', 10, 'Max length of question')
 
 # train hyperparameters
 flags.DEFINE_float('weight_decay', 0.001, 'Weight decay - 0 to turn off L2 regularization [0.001]')
@@ -47,7 +47,7 @@ FLAGS = flags.FLAGS
 def main(_):
 	word2vec = WordTable(FLAGS.glove_dim)
 	FLAGS.vocab_size = word2vec.vocab_size
-	dataset = DataSet(word2vec=word2vec, max_ques_size=FLAGS.max_ques_size, batch_size=FLAGS.batch_size, dataset_size=FLAGS.dataset_size)
+	dataset = DataSet(word2vec=word2vec, params=FLAGS)
 	with tf.Session() as sess:
 		model = DMN(FLAGS, None)
 		sess.run(tf.global_variables_initializer())

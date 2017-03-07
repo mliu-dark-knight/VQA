@@ -47,7 +47,7 @@ class EpisodeMemory:
 		return state
 
 	def attention(self, fs, m):
-		with tf.variable_scope('Attention'):
+		with tf.name_scope('Attention'):
 			q = self.question
 			Z = []
 			for f in fs:
@@ -72,16 +72,16 @@ class DMN(BaseModel):
 		with tf.name_scope('Loss'):
 			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer, logits=logits)
 			loss = tf.reduce_mean(cross_entropy)
-			self.total_loss = loss + tf.add_n(tf.get_collection('l2'))
+			total_loss = loss + tf.add_n(tf.get_collection('l2'))
 			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
-			predicts = tf.cast(tf.argmax(logits, 1), 'int32')
-			corrects = tf.equal(predicts, self.answer)
+			self.predicts = tf.cast(tf.argmax(logits, 1), 'int32')
+			corrects = tf.equal(self.predicts, self.answer)
 			self.accuracy = tf.reduce_mean(tf.cast(corrects, tf.float32))
 
 		optimizer = tf.train.AdamOptimizer()
-		self.gradient_descent = optimizer.minimize(self.total_loss, global_step=self.global_step)
+		self.gradient_descent = optimizer.minimize(total_loss, global_step=self.global_step)
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -96,7 +96,7 @@ class DMN(BaseModel):
 		return tf.stack(facts_unpack, axis=1)
 
 	def build_question(self):
-		with tf.name_scope('Question_Embedding') as scope:
+		with tf.name_scope('Question_Embedding'):
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
 		return question_vecs
@@ -130,6 +130,4 @@ class DMN(BaseModel):
 
 	def build_logits(self, memory):
 		with tf.name_scope('Answer'):
-			W = weight('Answer_W', [self.params.hidden_dim, self.params.vocab_size])
-			b = bias('Answer_b', self.params.vocab_size)
-		return tf.matmul(memory, W) + b
+			return fully_connected(memory, self.params.vocab_size, 'Answer', activation=None)

@@ -44,7 +44,7 @@ def flatten(x):
 
 
 def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=True):
-	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh}
+	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, None: lambda l: l}
 	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he')
 	if bn:
 		l = batch_norm(tf.matmul(input, W), prefix)
