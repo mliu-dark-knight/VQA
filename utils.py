@@ -1,4 +1,5 @@
 import os
+import random
 import pickle
 import skimage.io as io
 import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
 dataDir = 'VQA'
 taskType = 'OpenEnded'
-dataType = 'mscoco' # 'mscoco' for real and 'abstract_v002' for abstract
+dataType = 'mscoco'
 dataSubType = 'val2014'
 annFile = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubType)
 quesFile = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubType)
@@ -16,45 +17,61 @@ featDir = '%s/Features/%s/%s/' %(dataDir, dataType, dataSubType)
 annFile = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubType)
 quesFile = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubType)
 
+
 class DataSet:
-    def __init__(self, word2vec, batch_size, dataset_size=None):
+    def __init__(self, word2vec, max_ques_size, batch_size, dataset_size=None):
         assert batch_size <= dataset_size, 'batch size cannot be greater than data size.'
         self.batch_size = batch_size
         self.dataset_size = dataset_size
+        self.max_ques_size = max_ques_size
         self.word2vec = word2vec
         self.vqa = VQA(annFile, quesFile)
         self.anns = self.load_QA()
 
     def load_QA(self):
-        annIds = self.vqa.getQuesIds(ansTypes='yes/no')
+        annIds = self.vqa.getQuesIds(imgIds=[42, 73, 74, 133, 136, 139, 143, 164, 192, 196])
         if self.dataset_size is not None:
             annIds = annIds[:self.dataset_size]
         return self.vqa.loadQA(annIds)
 
     def id_to_question(self, id=None):
-        return map(lambda str: str.lower(), self.vqa.qqa[id]['question'][:-1].split())
+        question = self.vqa.qqa[id]['question'][:-1].split()
+        return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
 
     def id_to_answer(self, id=None):
-        return self.vqa.loadQA(id)[0]['answers'][0]['answer'].lower()
+        for answer in self.vqa.loadQA(id)[0]['answers']:
+            if len(answer['answer'].split()) == 1:
+                return answer['answer'].lower()
+        raise ValueError('Invalid answer')
 
-    def next_batch(self):
-        randomAnns = np.random.choice(self.anns, self.batch_size)
-        # self.vqa.showQA(randomAnns)
+    def next_batch(self, visualize=False):
         Is, Xs, Qs, As = [], [], [], []
-        for randomAnn in randomAnns:
+        while len(Is) < self.batch_size:
+            randomAnn = random.choice(self.anns)
+            if visualize:
+                self.vqa.showQA([randomAnn])
             imgId = randomAnn['image_id']
             imgFilename = 'COCO_' + dataSubType + '_'+ str(imgId).zfill(12) + '.jpg'
-            featFilename = 'COCO_' + dataSubType + '_' + str(imgId).zfill(12) + '.npz'
+            featFilename = 'COCO_' + dataSubType + '_' + str(imgId).zfill(12) + '.npy'
 
-            Is.append(io.imread(imgDir + imgFilename))
-            Xs.append(np.load(featDir + featFilename))
-            Qs.append(np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])]))
-            As.append(self.id_to_answer(randomAnn['question_id']))
-        return Is, np.stack(Xs), Qs, np.stack(As)
+            try:
+                I, X = io.imread(imgDir + imgFilename), np.load(featDir + featFilename)
+                Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
+                A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
+            except:
+                continue
+            Is.append(I)
+            Xs.append(X)
+            Qs.append(Q)
+            As.append(A)
+        assert len(Is) == len(Xs) and len(Xs) == len(Qs) and len(Qs) == len(As)
+        return (Is, np.stack(Xs), np.stack(Qs), np.stack(As))
+
 
 class WordTable:
     def __init__(self, dim):
         self.word2vec = WordTable.load_glove(dim)
+        self.dim = dim
         self.vocab_size = len(self.word2vec)
         self.index_word()
 
@@ -66,12 +83,13 @@ class WordTable:
             self.idx2word[idx] = word
 
     def word_vector(self, word):
+        if word == None:
+            return np.zeros(self.dim)
         return self.word2vec[word]
 
+    # for sparse softmax cross entropy
     def one_hot(self, word):
-        vec = np.zeros(self.vocab_size)
-        vec[self.word2idx[word]] = 1.0
-        return vec
+        return self.word2idx[word]
 
     def word_to_index(self, word):
         return self.word2idx[word]

@@ -201,5 +201,5 @@ if __name__ == '__main__':
 	for filename in os.listdir(img_dir):
 		img = imresize(imread(img_dir + filename, mode='RGB'), (224, 224, 3), 'bicubic')
 		feature = np.reshape(sess.run(vgg.pool5, feed_dict={vgg.imgs: [img]})[0], (7 * 7, 512))
-		np.savez(feature_dir + filename[:-4], feature)
+		np.save(feature_dir + filename[:-4], feature)
 

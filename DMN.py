@@ -5,7 +5,6 @@ import tensorflow as tf
 
 
 class BaseModel(object):
-    """ Code from mem2nn-tensorflow. """
     def __init__(self, params, words):
         self.params = params
         self.words = words
@@ -14,6 +13,7 @@ class BaseModel(object):
         with tf.variable_scope('DMN'):
             print("Building DMN...")
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
+            self.learning_rate = tf.placeholder(tf.float32, shape=[])
             self.build()
             self.saver = tf.train.Saver()
             self.merged_summary_op = tf.summary.merge_all()
@@ -22,67 +22,43 @@ class BaseModel(object):
     def build(self):
         raise NotImplementedError()
 
-    def get_feed_dict(self, batch, is_train):
-        raise NotImplementedError()
+    def get_feed_dict(self, batch, sess):
+        def learning_rate(step):
+            return 1.0 / (1.0 + step * 1e-2)
+
+        (Is, Xs, Qs, As) = batch
+        return {self.input: Xs, self.question: Qs, self.answer: As, self.learning_rate: learning_rate(sess.run(self.global_step))}
 
     def train_batch(self, sess, batch):
-        feed_dict = self.get_feed_dict(batch, is_train=True)
-        return sess.run([self.opt_op, self.global_step], feed_dict=feed_dict)
+        feed_dict = self.get_feed_dict(batch, sess)
+        sess.run([self.gradient_descent, self.global_step], feed_dict=feed_dict)
 
     def test_batch(self, sess, batch):
-        feed_dict = self.get_feed_dict(batch, is_train=False)
-        return sess.run([self.num_corrects, self.total_loss, self.global_step], feed_dict=feed_dict)
+        feed_dict = self.get_feed_dict(batch, sess)
+        return sess.run([self.accuracy, self.total_loss], feed_dict=feed_dict)
 
-    def train(self, sess, train_data, val_data):
-        params = self.params
-        num_epochs = params.num_epochs
-        num_batches = train_data.num_batches
-
-        print("Training %d epochs ..." % num_epochs)
-        for epoch_no in tqdm(range(num_epochs), desc='Epoch', maxinterval=86400, ncols=100):
-            for _ in range(num_batches):
+    def train(self, sess, train_data):
+        for epoch in range(self.params.num_epochs):
+            for step in range(self.params.num_steps):
                 batch = train_data.next_batch()
-                _, global_step = self.train_batch(sess, batch)
+                self.train_batch(sess, batch)
 
-            train_data.reset()
-
-            if (epoch_no + 1) % params.acc_period == 0:
-                print()  # Newline for TQDM
-                self.eval(sess, train_data, name='Training')
-
-            if val_data and (epoch_no + 1) % params.val_period == 0:
-                self.eval(sess, val_data, name='Validation')
-
-            if (epoch_no + 1) % params.save_period == 0:
+            batch = train_data.next_batch()
+            accuracy, _ = self.test_batch(sess, batch)
+            print('Accuracy: %f' % accuracy)
+            if epoch % self.params.save_period == 0:
                 self.save(sess)
 
-        print("Training completed.")
-
-    def eval(self, sess, data, name):
-        num_batches = data.num_batches
-        num_corrects = total = 0
-        losses = []
-        for _ in range(num_batches):
-            batch = data.next_batch()
-            cur_num_corrects, cur_loss, global_step = self.test_batch(sess, batch)
-            num_corrects += cur_num_corrects
-            total += len(batch[0])
-            losses.append(cur_loss)
-        data.reset()
-        loss = np.mean(losses)
-
-        print("[%s] step %d: Accuracy = %.2f%% (%d / %d), Loss = %.4f" % \
-              (name, global_step, 100 * float(num_corrects) / total, num_corrects, total, loss))
-        return loss
+        print('Training complete.')
 
     def save(self, sess):
-        print("Saving model to %s" % self.save_dir)
+        print('Saving model to %s' % self.save_dir)
         self.saver.save(sess, self.save_dir, self.global_step)
 
     def load(self, sess):
-        print("Loading model ...")
+        print('Loading model ...')
         checkpoint = tf.train.get_checkpoint_state(self.save_dir)
         if checkpoint is None:
-            print("Error: No saved model found. Please train first.")
+            print('Error: No saved model found')
             sys.exit(0)
         self.saver.restore(sess, checkpoint.model_checkpoint_path)

@@ -8,17 +8,14 @@ flags = tf.app.flags
 # directories
 flags.DEFINE_string('model', 'DMN+', 'Model type - DMN+, DMN, [Default: DMN+]')
 flags.DEFINE_boolean('test', False, 'true for testing, false for training [False]')
-flags.DEFINE_string('data_dir', 'data/tasks_1-20_v1-2/en-10k', 'Data directory [data/tasks_1-20_v1-2/en-10k]')
-flags.DEFINE_string('save_dir', 'save', 'Save path [save]')
+flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_bool('gpu', True, 'Use GPU? [True]')
-flags.DEFINE_integer('batch_size', 128, 'Batch size during training and testing [128]')
-flags.DEFINE_integer('num_epochs', 256, 'Number of epochs for training [256]')
-flags.DEFINE_float('learning_rate', 0.002, 'Learning rate [0.002]')
+flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing [128]')
+flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
+flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training [256]')
+flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model? [False]')
-flags.DEFINE_integer('acc_period', 10, 'Training accuracy display period [10]')
-flags.DEFINE_integer('val_period', 40, 'Validation period (for display purpose) [40]')
 flags.DEFINE_integer('save_period', 80, 'Save period [80]')
 
 # model params
@@ -28,14 +25,12 @@ flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - rel
 flags.DEFINE_integer('glove_dim', 50, 'GloVe size - Only used in dmn [50]')
 flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size, delete this line during training')
 flags.DEFINE_integer('embed_size', 100, 'Word embedding size - Used in dmn+, dmn_embed [80]')
-flags.DEFINE_integer('hidden_dim', 50, 'Size of hidden units [80]')
+flags.DEFINE_integer('hidden_dim', 80, 'Size of hidden units [80]')
 flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
 flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
-flags.DEFINE_bool('episode_memory', True, 'Use episode memory')
-# flags.DEFINE_bool('grid_lstm', True, 'Use grid LSTM to encode question')
+flags.DEFINE_bool('episode_memory', False, 'Use episode memory')
 flags.DEFINE_bool('question_coattention', True, 'Use question coattention')
-flags.DEFINE_integer('dynamic_rnn', True, 'Use dynamic rnn')
-flags.DEFINE_integer('max_ques_size', None, 'Max length of question, [None] for dynamic rnn')
+flags.DEFINE_integer('max_ques_size', 10, 'Max length of question, [None] for dynamic rnn')
 
 # train hyperparameters
 flags.DEFINE_float('weight_decay', 0.001, 'Weight decay - 0 to turn off L2 regularization [0.001]')
@@ -52,11 +47,12 @@ FLAGS = flags.FLAGS
 def main(_):
 	word2vec = WordTable(FLAGS.glove_dim)
 	FLAGS.vocab_size = word2vec.vocab_size
-	dataset = DataSet(word2vec=word2vec, batch_size=10, dataset_size=10)
+	dataset = DataSet(word2vec=word2vec, max_ques_size=FLAGS.max_ques_size, batch_size=FLAGS.batch_size, dataset_size=FLAGS.dataset_size)
 	with tf.Session() as sess:
 		model = DMN(FLAGS, None)
 		sess.run(tf.global_variables_initializer())
 		summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
+		model.train(sess, dataset)
 
 if __name__ == '__main__':
 	tf.app.run()

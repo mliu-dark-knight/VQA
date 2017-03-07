@@ -62,7 +62,7 @@ class DMN(BaseModel):
 	def build(self):
 		self.input = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.img_size, self.params.channel_dim])
 		self.question = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.max_ques_size, self.params.glove_dim])
-		self.answer = tf.placeholder(tf.int32, shape=[self.params.batch_size], name='y')
+		self.answer = tf.placeholder(tf.int32, shape=[self.params.batch_size])
 
 		facts = self.build_input()
 		questions = self.build_question()
@@ -72,7 +72,7 @@ class DMN(BaseModel):
 		with tf.name_scope('Loss'):
 			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer, logits=logits)
 			loss = tf.reduce_mean(cross_entropy)
-			total_loss = loss + tf.add_n(tf.get_collection('l2'))
+			self.total_loss = loss + tf.add_n(tf.get_collection('l2'))
 			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
@@ -81,7 +81,7 @@ class DMN(BaseModel):
 			self.accuracy = tf.reduce_mean(tf.cast(corrects, tf.float32))
 
 		optimizer = tf.train.AdamOptimizer()
-		self.step = optimizer.minimize(total_loss, global_step=self.global_step)
+		self.gradient_descent = optimizer.minimize(self.total_loss, global_step=self.global_step)
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -98,18 +98,13 @@ class DMN(BaseModel):
 	def build_question(self):
 		with tf.name_scope('Question_Embedding') as scope:
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
-			if self.params.dynamic_rnn:
-				question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
-			else:
-				question_vecs, _ = tf.contrib.rnn.dynamic_rnn(gru, tf.unstack(self.question, axis=1), dtype=tf.float32)
+			question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
 		return question_vecs
 
 	def build_memory(self, questions, facts):
 		gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 		with tf.variable_scope('Memory') as scope:
-			question = tf.identity(questions[-1])
-			if not self.params.dynamic_rnn:
-				questions = tf.stack(questions, axis=1)
+			question = tf.identity(tf.unstack(questions, axis=1)[-1])
 			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
 			memory = tf.identity(question)
 			for t in range(self.params.memory_step):
@@ -138,5 +133,3 @@ class DMN(BaseModel):
 			W = weight('Answer_W', [self.params.hidden_dim, self.params.vocab_size])
 			b = bias('Answer_b', self.params.vocab_size)
 		return tf.matmul(memory, W) + b
-
-
