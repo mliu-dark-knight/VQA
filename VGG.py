@@ -200,6 +200,6 @@ if __name__ == '__main__':
 		os.makedirs(feature_dir)
 	for filename in os.listdir(img_dir):
 		img = imresize(imread(img_dir + filename, mode='RGB'), (224, 224, 3), 'bicubic')
-		feature = sess.run(vgg.pool5, feed_dict={vgg.imgs: [img]})[0]
-		np.savez(feature_dir + filename, feature)
+		feature = np.reshape(sess.run(vgg.pool5, feed_dict={vgg.imgs: [img]})[0], (7 * 7, 512))
+		np.savez(feature_dir + filename[:-4], feature)
 

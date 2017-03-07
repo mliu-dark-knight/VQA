@@ -25,7 +25,7 @@ flags.DEFINE_integer('save_period', 80, 'Save period [80]')
 flags.DEFINE_integer('memory_step', 3, 'Episodic Memory steps [3]')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru [relu]')
 # flags.DEFINE_bool('memory_tied', False, 'Share memory update weights among the layers? [False]')
-flags.DEFINE_integer('glove_dim', 100, 'GloVe size - Only used in dmn [50]')
+flags.DEFINE_integer('glove_dim', 50, 'GloVe size - Only used in dmn [50]')
 flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size, delete this line during training')
 flags.DEFINE_integer('embed_size', 100, 'Word embedding size - Used in dmn+, dmn_embed [80]')
 flags.DEFINE_integer('hidden_dim', 50, 'Size of hidden units [80]')
@@ -50,10 +50,13 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    with tf.Session() as sess:
-        model = DMN(FLAGS, None)
-        sess.run(tf.global_variables_initializer())
-        summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
+	word2vec = WordTable(FLAGS.glove_dim)
+	FLAGS.vocab_size = word2vec.vocab_size
+	dataset = DataSet(word2vec=word2vec, batch_size=10, dataset_size=10)
+	with tf.Session() as sess:
+		model = DMN(FLAGS, None)
+		sess.run(tf.global_variables_initializer())
+		summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
 
 if __name__ == '__main__':
-    tf.app.run()
+	tf.app.run()
