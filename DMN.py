@@ -22,41 +22,61 @@ class BaseModel(object):
     def build(self):
         raise NotImplementedError()
 
-    def get_feed_dict(self, batch, sess):
+    def get_feed_dict(self, batch, type, sess):
         def learning_rate(step):
             return 1.0 / (1.0 + step * 1e-2)
 
-        (Is, Xs, Qs, As) = batch
-        return {self.input: Xs, self.question: Qs, self.answer: As, self.learning_rate: learning_rate(sess.run(self.global_step))}
+        if type == 'b':
+            (_, Is, Xs, Qs, As, _, _, _, _, _) = batch
+            type = np.zeros_like(As)
+            answer = self.answer_b
+        else:
+            (_, _, _, _, _, _, Is, Xs, Qs, As) = batch
+            type = np.ones_like(As)
+            answer = self.answer_m
+        return {self.input: Xs, self.question: Qs, self.type: type, answer: As, self.learning_rate: learning_rate(sess.run(self.global_step))}
 
     def train_batch(self, sess, batch):
-        feed_dict = self.get_feed_dict(batch, sess)
-        sess.run([self.gradient_descent, self.global_step], feed_dict=feed_dict)
+        for (type, gradient_descent) in [('b', self.gradient_descent_b), ('m', self.gradient_descent_m)]:
+            feed_dict = self.get_feed_dict(batch, type, sess)
+            if len(feed_dict[self.type]) > 0:
+                sess.run([gradient_descent, self.global_step], feed_dict=feed_dict)
 
     def test_batch(self, sess, batch):
-        feed_dict = self.get_feed_dict(batch, sess)
-        return sess.run([self.predicts, self.accuracy], feed_dict=feed_dict)
+        ret_list = []
+        for (type, predicts, accuracy) in [('b', self.predicts_b, self.accuracy_b), ('m', self.predicts_m, self.accuracy_m)]:
+            feed_dict = self.get_feed_dict(batch, type, sess)
+            if len(feed_dict[self.type]) > 0:
+                ret_list += sess.run([self.predicts_t, predicts, accuracy], feed_dict=feed_dict)
+            else:
+                ret_list += [[], [], 0.0]
+        return ret_list
 
     def train(self, sess, train_data):
         for epoch in tqdm(range(self.params.num_epochs), desc='Epoch', maxinterval=10000, ncols=100):
             for step in tqdm(range(self.params.num_steps), desc='Step', maxinterval=10000, ncols=100):
                 batch = train_data.next_batch()
-                self.train_batch(sess, batch[1:])
+                self.train_batch(sess, batch)
 
             self.eval(sess, train_data)
-            if epoch % self.params.save_period == 0:
-                self.save(sess)
+            # if epoch % self.params.save_period == 0:
+            #     self.save(sess)
 
         print('Training complete.')
 
     def eval(self, sess, eval_data):
         batch = eval_data.next_batch()
-        predicts, accuracy = self.test_batch(sess, batch[1:])
-        (Anns, Is, _, _, _) = batch
-        for predict, Ann, I in zip(predicts, Anns, Is):
+        predicts_tb, predicts_b, accuracy_b, predicts_tm, predicts_m, accuracy_m = self.test_batch(sess, batch)
+        (Anns_b, Is_b, _, _, _, Anns_m, Is_m, _, _, _) = batch
+        for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
+            eval_data.visualize(Ann, I)
+            tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
+        tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
+        for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
             eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
-        tqdm.write('Accuracy: %f' % accuracy)
+        tqdm.write('Accuracy (other): %f' % accuracy_m)
+
 
     def save(self, sess):
         print('Saving model to %s' % self.save_dir)

@@ -56,8 +56,8 @@ class DataSet:
         plt.show()
 
     def next_batch(self, visualize=False):
-        Anns, Is, Xs, Qs, As = [], [], [], [], []
-        while len(Is) < self.batch_size:
+        Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}
+        while len(Is['b']) + len(Is['m']) < self.batch_size:
             randomAnn = random.choice(self.anns)
             imgId = randomAnn['image_id']
             imgFilename = 'COCO_' + dataSubType + '_'+ str(imgId).zfill(12) + '.jpg'
@@ -68,17 +68,21 @@ class DataSet:
                 A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
             except:
                 continue
-            Anns.append(randomAnn)
-            Is.append(I)
-            Xs.append(X)
-            Qs.append(Q)
-            As.append(A)
+            if randomAnn['answer_type'] == 'yes/no':
+                type = 'b'
+                A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
+            else:
+                type = 'm'
+            Anns[type].append(randomAnn)
+            Is[type].append(I)
+            Xs[type].append(X)
+            Qs[type].append(Q)
+            As[type].append(A)
             if visualize:
                 self.visualize(randomAnn, I)
 
-        assert len(Is) == len(Xs) and len(Xs) == len(Qs) and len(Qs) == len(As)
-        assert type(np.array(Qs)) == np.ndarray and type(Qs[0]) == np.ndarray
-        return (np.array(Anns), np.array(Is), np.stack(Xs), np.array(Qs), np.stack(As))
+        return (np.array(Anns['b']), np.array(Is['b']), np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
+                np.array(Anns['m']), np.array(Is['m']), np.array(Xs['m']), np.array(Qs['m']), np.array(As['m']))
 
 
 class WordTable:

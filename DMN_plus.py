@@ -60,28 +60,38 @@ class EpisodeMemory:
 
 class DMN(BaseModel):
 	def build(self):
-		self.input = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.img_size, self.params.channel_dim])
-		self.question = tf.placeholder(tf.float32, shape=[self.params.batch_size, self.params.max_ques_size, self.params.glove_dim])
-		self.answer = tf.placeholder(tf.int32, shape=[self.params.batch_size])
+		self.input = tf.placeholder(tf.float32, shape=[None, self.params.img_size, self.params.channel_dim])
+		self.question = tf.placeholder(tf.float32, shape=[None, self.params.max_ques_size, self.params.glove_dim])
+		self.type = tf.placeholder(tf.int32, shape=[None])
+		self.answer_b = tf.placeholder(tf.int32, shape=[None])
+		self.answer_m = tf.placeholder(tf.int32, shape=[None])
 
 		facts = self.build_input()
 		questions = self.build_question()
+		type = self.build_type(tf.unstack(questions, axis=1)[-1])
 		memory = self.build_memory(questions, facts)
-		logits = self.build_logits(memory)
+		logits_b = self.build_logits(memory, 2, 'AnswerBinary')
+		logits_m = self.build_logits(memory, self.params.vocab_size, 'AnswerMulti')
 
 		with tf.name_scope('Loss'):
-			cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer, logits=logits)
-			loss = tf.reduce_mean(cross_entropy)
-			total_loss = loss + tf.add_n(tf.get_collection('l2'))
+			loss_t = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.type, logits=type))
+			loss_b = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_b, logits=logits_b))
+			loss_m = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
+			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
+			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
 			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
-			self.predicts = tf.cast(tf.argmax(logits, 1), 'int32')
-			corrects = tf.equal(self.predicts, self.answer)
-			self.accuracy = tf.reduce_mean(tf.cast(corrects, tf.float32))
+			self.predicts_t = tf.cast(tf.argmax(type, 1), 'int32')
+			self.predicts_b = tf.cast(tf.argmax(logits_b, 1), 'int32')
+			self.predicts_m = tf.cast(tf.argmax(logits_m, 1), 'int32')
+			self.accuracy_t = tf.reduce_mean(tf.cast(tf.equal(self.predicts_t, self.type), tf.float32))
+			self.accuracy_b = tf.reduce_mean(tf.cast(tf.equal(self.predicts_b, self.answer_b), tf.float32))
+			self.accuracy_m = tf.reduce_mean(tf.cast(tf.equal(self.predicts_m, self.answer_m), tf.float32))
 
 		optimizer = tf.train.AdamOptimizer()
-		self.gradient_descent = optimizer.minimize(total_loss, global_step=self.global_step)
+		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
+		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -100,6 +110,10 @@ class DMN(BaseModel):
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
 		return question_vecs
+
+	def build_type(self, question):
+		with tf.name_scope('Question_Type'):
+			return fully_connected(question, 2, 'Type', activation=None, bn=False)
 
 	def build_memory(self, questions, facts):
 		gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
@@ -128,6 +142,6 @@ class DMN(BaseModel):
 				scope.reuse_variables()
 		return memory
 
-	def build_logits(self, memory):
+	def build_logits(self, memory, vocab_size, prefix):
 		with tf.name_scope('Answer'):
-			return fully_connected(memory, self.params.vocab_size, 'Answer', activation=None)
+			return fully_connected(memory, vocab_size, prefix, activation=None, bn=False)
