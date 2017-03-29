@@ -89,7 +89,8 @@ class DMN(BaseModel):
 			self.accuracy_b = tf.reduce_mean(tf.cast(tf.equal(self.predicts_b, self.answer_b), tf.float32))
 			self.accuracy_m = tf.reduce_mean(tf.cast(tf.equal(self.predicts_m, self.answer_m), tf.float32))
 
-		optimizer = tf.train.AdamOptimizer()
+		learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
+		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
 		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
 

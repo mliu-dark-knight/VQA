@@ -13,7 +13,6 @@ class BaseModel(object):
         with tf.variable_scope('DMN'):
             print("Building DMN...")
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
-            self.learning_rate = tf.placeholder(tf.float32, shape=[])
             self.build()
             self.saver = tf.train.Saver()
             self.merged_summary_op = tf.summary.merge_all()
@@ -23,9 +22,6 @@ class BaseModel(object):
         raise NotImplementedError()
 
     def get_feed_dict(self, batch, type, sess):
-        def learning_rate(step):
-            return 1.0 / (1.0 + step * 1e-2)
-
         if type == 'b':
             (_, Is, Xs, Qs, As, _, _, _, _, _) = batch
             type = np.zeros_like(As)
@@ -34,7 +30,7 @@ class BaseModel(object):
             (_, _, _, _, _, _, Is, Xs, Qs, As) = batch
             type = np.ones_like(As)
             answer = self.answer_m
-        return {self.input: Xs, self.question: Qs, self.type: type, answer: As, self.learning_rate: learning_rate(sess.run(self.global_step))}
+        return {self.input: Xs, self.question: Qs, self.type: type, answer: As}
 
     def train_batch(self, sess, batch):
         for (type, gradient_descent) in [('b', self.gradient_descent_b), ('m', self.gradient_descent_m)]:
