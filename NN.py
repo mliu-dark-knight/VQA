@@ -39,10 +39,6 @@ def conv(x, filter, is_training):
 	return tf.nn.relu(l)
 
 
-def flatten(x):
-	return tf.reshape(x, [-1])
-
-
 def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=True):
 	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, None: lambda l: l}
 	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he')

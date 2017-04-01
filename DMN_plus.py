@@ -98,13 +98,9 @@ class DMN(BaseModel):
 			print(variable.name, variable.get_shape())
 
 	def build_input(self):
-		input_unpack = tf.unstack(self.input, axis=1)
-		facts_unpack = []
-		with tf.variable_scope('Input_Embedding') as scope:
-			for f in input_unpack:
-				facts_unpack.append(fully_connected(f, self.params.hidden_dim, 'FactsEmbedding', activation='tanh', bn=False))
-				scope.reuse_variables()
-		return tf.stack(facts_unpack, axis=1)
+		input = tf.reshape(self.input, [-1, self.params.channel_dim])
+		facts = fully_connected(input, self.params.hidden_dim, 'ImageEmbedding', activation=None)
+		return tf.reshape(facts, [-1, self.params.img_size, self.params.hidden_dim])
 
 	def build_question(self):
 		with tf.name_scope('Question_Embedding'):
