@@ -23,8 +23,7 @@ class AttentionGRU(object):
 
 
 class EpisodeMemory:
-	def __init__(self, hidden_dim, question, facts, attention):
-		self.question = question
+	def __init__(self, hidden_dim, facts, attention):
 		self.hidden_dim = hidden_dim
 		self.facts = tf.unstack(facts, axis=1)
 
@@ -35,27 +34,26 @@ class EpisodeMemory:
 		if attention == 'gru':
 			self.gru = AttentionGRU(self.hidden_dim, self.hidden_dim)
 
-	def init_hidden(self):
-		return tf.zeros_like(self.question)
+	def init_hidden(self, question):
+		return tf.zeros_like(question)
 
-	def update(self, memory, attention):
-		gs = self.attention(self.facts, memory)
+	def update(self, memory, question, attention):
+		gs = self.attention(self.facts, memory, question)
 		if attention == 'soft':
 			facts = tf.stack(self.facts, axis=1)
 			return tf.transpose(tf.reduce_sum(tf.transpose(facts, perm=[2, 1, 0]) * gs, axis=1))
 
 		else:
 			gs = tf.unstack(gs, axis=1)
-			hidden = self.init_hidden()
+			hidden = self.init_hidden(question)
 			with tf.variable_scope('Attention_Gate') as scope:
 				for f, g in zip(self.facts, gs):
 					hidden = self.gru(f, hidden, g)
 					scope.reuse_variables()
 			return hidden
 
-	def attention(self, fs, m):
+	def attention(self, fs, m, q):
 		with tf.name_scope('Attention'):
-			q = self.question
 			Z = []
 			for f in fs:
 				z = tf.concat([f * q, f * m, tf.abs(f - q), tf.abs(f - m)], 1)
@@ -167,11 +165,11 @@ class DMN(BaseModel):
 	def build_memory(self, questions, facts):
 		with tf.variable_scope('Memory') as scope:
 			question = tf.identity(tf.unstack(questions, axis=1)[-1])
-			episode = EpisodeMemory(self.params.hidden_dim, question, facts, self.params.attention)
-			memory = tf.identity(question, self.params.attention)
+			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention)
+			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):
-				c = episode.update(memory, self.params.attention)
+				c = episode.update(memory, question, self.params.attention)
 				if self.params.memory_update == 'gru':
 					memory = gru(c, memory)[0]
 				else:
