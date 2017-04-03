@@ -68,8 +68,9 @@ Do not feed this into MultiRNN, for performance sake
 '''
 class QuasiRNN(object):
 	counter = 0
-	def __init__(self, num_units):
+	def __init__(self, num_units, kernel_w):
 		self.num_units = num_units
+		self.kernel_w = kernel_w
 		self.id = QuasiRNN.counter
 		QuasiRNN.counter += 1
 
@@ -88,7 +89,7 @@ class QuasiRNN(object):
 			h = o * c
 			return h, c
 
-		shape = inputs.get_shape().as_list()[1:] + [self.num_units]
+		shape = [self.kernel_w] + inputs.get_shape().as_list()[2:] + [self.num_units]
 		Z = tf.unstack(conv1d(inputs, shape, 1, 'Z', suffix=self.id, activation='tanh'), axis=1)
 		I = tf.unstack(conv1d(inputs, shape, 1, 'I', suffix=self.id, activation='sigmoid'), axis=1)
 		F = tf.unstack(conv1d(inputs, shape, 1, 'F', suffix=self.id, activation='sigmoid'), axis=1)
@@ -151,7 +152,7 @@ class DMN(BaseModel):
 			if self.params.quasi_rnn:
 				rnn_inputs = self.question
 				for _ in range(self.params.rnn_layer):
-					rnn = QuasiRNN(self.params.hidden_dim)
+					rnn = QuasiRNN(self.params.hidden_dim, self.params.kernel_width)
 					rnn_inputs, _ = rnn(rnn_inputs, self.params.pooling)
 				question_vecs = rnn_inputs
 			else:

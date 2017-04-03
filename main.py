@@ -33,6 +33,7 @@ flags.DEFINE_integer('max_ques_size', 10, 'Max length of question')
 flags.DEFINE_float('lambda_r', 0.0, 'Regularization weight')
 flags.DEFINE_float('lambda_t', 0.0, 'Question type weight')
 flags.DEFINE_boolean('quasi_rnn', True, 'Use quasi rnn')
+flags.DEFINE_integer('kernel_width', 2, 'Kernel width')
 flags.DEFINE_string('pooling', '_ifo', 'Pooling method for quasi rnn, _f, _fo or _ifo')
 flags.DEFINE_integer('rnn_layer', 2, 'Number of layers in question encoder')
 
