@@ -1,10 +1,11 @@
 import math
 import tensorflow as tf
+from functools import *
 
 
 def weight(name, shape, init='he'):
 	assert init == 'he'
-	std = math.sqrt(2.0 / reduce(lambda x, y: x + y, shape[:-1]))
+	std = math.sqrt(2.0 / reduce(lambda x, y: x + y, [0] + shape[:-1]))
 	initializer = tf.random_normal_initializer(stddev=std)
 
 	var = tf.get_variable(name, shape, initializer=initializer)

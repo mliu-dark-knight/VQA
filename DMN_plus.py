@@ -41,7 +41,7 @@ class EpisodeMemory:
 		gs = self.attention(self.facts, memory, question)
 		if attention == 'soft':
 			facts = tf.stack(self.facts, axis=1)
-			return tf.transpose(tf.reduce_sum(tf.transpose(facts, perm=[2, 1, 0]) * gs, axis=1))
+			return tf.reduce_sum(facts * gs, axis=1)
 
 		else:
 			gs = tf.unstack(gs, axis=1)
