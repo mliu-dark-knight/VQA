@@ -23,7 +23,7 @@ class AttentionGRU(object):
 
 
 class EpisodeMemory:
-	def __init__(self, hidden_dim, facts, attention):
+	def __init__(self, hidden_dim, facts, attention, epsilon):
 		self.hidden_dim = hidden_dim
 		self.facts = tf.unstack(facts, axis=1)
 
@@ -31,6 +31,7 @@ class EpisodeMemory:
 		self.b1 = bias('EpisodeMemory_b1', [hidden_dim])
 		self.W2 = weight('EpisodeMemory_W2', [hidden_dim, 1])
 		self.b2 = bias('EpisodeMemory_b2', [1])
+		self.epsilon = epsilon
 		if attention == 'gru':
 			self.gru = AttentionGRU(self.hidden_dim, self.hidden_dim)
 
@@ -58,7 +59,7 @@ class EpisodeMemory:
 			for f in fs:
 				z = tf.concat([f * q, f * m, tf.abs(f - q), tf.abs(f - m)], 1)
 				Z.append(tf.matmul(tf.nn.tanh(tf.matmul(z, self.W1) + self.b1), self.W2) + self.b2)
-			g = tf.nn.softmax(tf.stack(Z, axis=1))
+			g = tf.nn.softmax(tf.stack(Z, axis=1) / self.epsilon)
 		return g
 
 '''
@@ -165,7 +166,7 @@ class DMN(BaseModel):
 	def build_memory(self, questions, facts):
 		with tf.variable_scope('Memory') as scope:
 			question = tf.identity(tf.unstack(questions, axis=1)[-1])
-			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention)
+			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention, self.params.epsilon)
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):

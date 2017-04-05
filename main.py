@@ -7,13 +7,13 @@ flags = tf.app.flags
 
 # directories
 flags.DEFINE_boolean('test', False, 'true for testing, false for training')
-flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
+flags.DEFINE_string('save_dir', 'model/', 'Save path')
 
 # training options
 flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 100, 'Number of steps per epoch')
+flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 80, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
@@ -27,7 +27,8 @@ flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size')
 flags.DEFINE_integer('hidden_dim', 80, 'Size of hidden units')
 flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
 flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
-flags.DEFINE_string('attention', 'gru', 'Attention mechanism')
+flags.DEFINE_string('attention', 'soft', 'Attention mechanism')
+flags.DEFINE_float('epsilon', 0.01, 'Annealing parameter for attention softmax')
 flags.DEFINE_integer('max_ques_size', 10, 'Max length of question')
 flags.DEFINE_float('lambda_r', 0.0, 'Regularization weight')
 flags.DEFINE_float('lambda_t', 0.0, 'Question type weight')
