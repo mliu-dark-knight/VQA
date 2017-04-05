@@ -3,7 +3,7 @@ from DMN import BaseModel
 from NN import *
 
 
-class AttentionGRU:
+class AttentionGRU(object):
 	def __init__(self, num_units, input_dim):
 		self.num_units = num_units
 		self.input_dim = input_dim
@@ -23,8 +23,7 @@ class AttentionGRU:
 
 
 class EpisodeMemory:
-	def __init__(self, hidden_dim, question, facts):
-		self.question = question
+	def __init__(self, hidden_dim, facts, attention):
 		self.hidden_dim = hidden_dim
 		self.facts = tf.unstack(facts, axis=1)
 
@@ -32,30 +31,74 @@ class EpisodeMemory:
 		self.b1 = bias('EpisodeMemory_b1', [hidden_dim])
 		self.W2 = weight('EpisodeMemory_W2', [hidden_dim, 1])
 		self.b2 = bias('EpisodeMemory_b2', [1])
-		self.gru = AttentionGRU(self.hidden_dim, self.hidden_dim)
+		if attention == 'gru':
+			self.gru = AttentionGRU(self.hidden_dim, self.hidden_dim)
 
-	def init_state(self):
-		return tf.zeros_like(self.question)
+	def init_hidden(self, question):
+		return tf.zeros_like(question)
 
-	def update(self, memory):
-		state = self.init_state()
-		gs = self.attention(self.facts, memory)
-		with tf.variable_scope('Attention_Gate') as scope:
-			for f, g in zip(self.facts, gs):
-				state = self.gru(f, state, g)
-				scope.reuse_variables()
-		return state
+	def update(self, memory, question, attention):
+		gs = self.attention(self.facts, memory, question)
+		if attention == 'soft':
+			facts = tf.stack(self.facts, axis=1)
+			return tf.transpose(tf.reduce_sum(tf.transpose(facts, perm=[2, 1, 0]) * gs, axis=1))
 
-	def attention(self, fs, m):
+		else:
+			gs = tf.unstack(gs, axis=1)
+			hidden = self.init_hidden(question)
+			with tf.variable_scope('Attention_Gate') as scope:
+				for f, g in zip(self.facts, gs):
+					hidden = self.gru(f, hidden, g)
+					scope.reuse_variables()
+			return hidden
+
+	def attention(self, fs, m, q):
 		with tf.name_scope('Attention'):
-			q = self.question
 			Z = []
 			for f in fs:
 				z = tf.concat([f * q, f * m, tf.abs(f - q), tf.abs(f - m)], 1)
 				Z.append(tf.matmul(tf.nn.tanh(tf.matmul(z, self.W1) + self.b1), self.W2) + self.b2)
 			g = tf.nn.softmax(tf.stack(Z, axis=1))
-		return tf.unstack(g, axis=1)
+		return g
 
+'''
+Do not feed this into MultiRNN, for performance sake
+'''
+class QuasiRNN(object):
+	counter = 0
+	def __init__(self, num_units, kernel_w):
+		self.num_units = num_units
+		self.kernel_w = kernel_w
+		self.id = QuasiRNN.counter
+		QuasiRNN.counter += 1
+
+	def __call__(self, inputs, pooling):
+		def _f(z, i, f, o, h, c):
+			h = f * h + (1 - f) * z
+			return f, c
+
+		def _fo(z, i, f, o, h, c):
+			c = f * c + (1 - f) * z
+			h = o * c
+			return h, c
+
+		def _ifo(z, i, f, o, h, c):
+			c = f * c + i * z
+			h = o * c
+			return h, c
+
+		shape = [self.kernel_w] + inputs.get_shape().as_list()[2:] + [self.num_units]
+		Z = tf.unstack(conv1d(inputs, shape, 1, 'Z', suffix=self.id, activation='tanh'), axis=1)
+		I = tf.unstack(conv1d(inputs, shape, 1, 'I', suffix=self.id, activation='sigmoid'), axis=1)
+		F = tf.unstack(conv1d(inputs, shape, 1, 'F', suffix=self.id, activation='sigmoid'), axis=1)
+		O = tf.unstack(conv1d(inputs, shape, 1, 'O', suffix=self.id, activation='sigmoid'), axis=1)
+		h, c = tf.zeros_like(O[0]), tf.zeros_like(O[0])
+		H, C = [], []
+		for z, i, f, o in zip(Z, I, F, O):
+			h, c = eval(pooling)(z, i, f, o, h, c)
+			H.append(h)
+			C.append(c)
+		return tf.stack(H, axis=1), tf.stack(H, axis=1)
 
 
 class DMN(BaseModel):
@@ -104,8 +147,15 @@ class DMN(BaseModel):
 
 	def build_question(self):
 		with tf.name_scope('Question_Embedding'):
-			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
-			question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
+			if self.params.quasi_rnn:
+				rnn_inputs = self.question
+				for _ in range(self.params.rnn_layer):
+					rnn = QuasiRNN(self.params.hidden_dim, self.params.kernel_width)
+					rnn_inputs, _ = rnn(rnn_inputs, self.params.pooling)
+				question_vecs = rnn_inputs
+			else:
+				gru = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.GRUCell(self.params.hidden_dim)] * self.params.rnn_layer)
+				question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
 		return question_vecs
 
 	def build_type(self, question):
@@ -113,28 +163,24 @@ class DMN(BaseModel):
 			return fully_connected(question, 2, 'Type', activation=None, bn=False)
 
 	def build_memory(self, questions, facts):
-		gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 		with tf.variable_scope('Memory') as scope:
 			question = tf.identity(tf.unstack(questions, axis=1)[-1])
-			episode = EpisodeMemory(self.params.hidden_dim, question, facts)
+			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention)
 			memory = tf.identity(question)
+			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):
-				if self.params.episode_memory:
-					if self.params.memory_update == 'gru':
-						memory = gru(episode.update(memory), memory)[0]
-					else:
-						c = episode.update(memory)
-						with tf.variable_scope(scope, reuse=False):
-							memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t), bn=False)
+				c = episode.update(memory, question, self.params.attention)
+				if self.params.memory_update == 'gru':
+					memory = gru(c, memory)[0]
 				else:
-					h_v = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'MemoryUpdate', activation='tanh')
-					a_v = tf.nn.softmax(tf.reduce_sum(tf.transpose(facts, perm=[1, 0, 2]) * h_v, axis=2), dim=0)
-					memory = tf.transpose(tf.reduce_mean(tf.transpose(facts, perm=[2, 1, 0]) * a_v, axis=1))
+					with tf.variable_scope(scope, reuse=False):
+						memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate',
+						                         suffix=str(t), bn=False)
 
-				if self.params.question_coattention:
-					h_q = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention', activation='tanh')
-					a_q = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h_q, axis=2), dim=0)
-					question = tf.transpose(tf.reduce_mean(tf.transpose(questions, perm=[2, 1, 0]) * a_q, axis=1))
+				h_q = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention',
+				                      activation='tanh')
+				a_q = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h_q, axis=2), dim=0)
+				question = tf.transpose(tf.reduce_sum(tf.transpose(questions, perm=[2, 1, 0]) * a_q, axis=1))
 
 				scope.reuse_variables()
 		return memory

@@ -3,8 +3,8 @@ import tensorflow as tf
 
 
 def weight(name, shape, init='he'):
-	assert init == 'he' and len(shape) == 2
-	std = math.sqrt(2.0 / shape[0])
+	assert init == 'he'
+	std = math.sqrt(2.0 / reduce(lambda x, y: x + y, shape[:-1]))
 	initializer = tf.random_normal_initializer(stddev=std)
 
 	var = tf.get_variable(name, shape, initializer=initializer)
@@ -30,17 +30,23 @@ def batch_norm(x, prefix):
 
 
 def dropout(x, keep_prob, is_training):
-	return tf.cond(is_training, lambda: tf.nn.dropout(x, keep_prob), lambda: x)
+	return tf.cond(is_training, lambda: tf.nn.dropout(x, keep_prob), lambda: x * keep_prob)
 
 
-def conv(x, filter, is_training):
-	l = tf.nn.conv2d(x, filter, strides=[1, 1, 1, 1], padding='SAME')
-	l = batch_norm(l, is_training)
-	return tf.nn.relu(l)
+
+def conv1d(x, shape, stride, prefix, suffix='', activation='relu', bn=False):
+	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, 'sigmoid': tf.nn.sigmoid, None: tf.identity}
+	W = weight(prefix + '_W' + str(suffix), shape)
+	if bn:
+		l = batch_norm(tf.nn.conv1d(x, W, stride, padding='SAME'), prefix)
+	else:
+		b = bias(prefix + '_b' + str(suffix), shape[-1])
+		l = tf.nn.conv1d(x, W, stride, padding='SAME') + b
+	return func[activation](l)
 
 
-def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=True):
-	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, None: lambda l: l}
+def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=False):
+	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, 'sigmoid': tf.nn.sigmoid, None: tf.identity}
 	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he')
 	if bn:
 		l = batch_norm(tf.matmul(input, W), prefix)
