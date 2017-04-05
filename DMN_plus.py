@@ -123,7 +123,6 @@ class DMN(BaseModel):
 			loss_m = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
 			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
 			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
-			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
 			self.predicts_t = tf.cast(tf.argmax(type, 1), 'int32')
