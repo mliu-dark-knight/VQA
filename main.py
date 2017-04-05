@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from DMN_plus import DMN
-# from utils import *
+from utils import *
 
 flags = tf.app.flags
 
@@ -41,14 +41,14 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-	# word2vec = WordTable(FLAGS.glove_dim)
-	# FLAGS.vocab_size = word2vec.vocab_size
-	# dataset = DataSet(word2vec=word2vec, params=FLAGS)
+	word2vec = WordTable(FLAGS.glove_dim)
+	FLAGS.vocab_size = word2vec.vocab_size
+	dataset = DataSet(word2vec=word2vec, params=FLAGS)
 	with tf.Session() as sess:
 		model = DMN(FLAGS, None)
 		sess.run(tf.global_variables_initializer())
-		# summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
-		# model.train(sess, dataset)
+		summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
+		model.train(sess, dataset)
 
 if __name__ == '__main__':
 	tf.app.run()
