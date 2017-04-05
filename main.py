@@ -6,16 +6,15 @@ from utils import *
 flags = tf.app.flags
 
 # directories
-flags.DEFINE_string('model', 'DMN+', 'Model type - DMN+, DMN, [Default: DMN+]')
-flags.DEFINE_boolean('test', False, 'true for testing, false for training [False]')
+flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing [128]')
+flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
-flags.DEFINE_integer('num_epochs', 100, 'Number of epochs for training [256]')
-flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
-flags.DEFINE_boolean('load', False, 'Start training from saved model? [False]')
+flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
+flags.DEFINE_integer('num_steps', 100, 'Number of steps per epoch')
+flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 80, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
 flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
