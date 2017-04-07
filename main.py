@@ -1,5 +1,5 @@
-import os
 import tensorflow as tf
+
 from DMN_plus import DMN
 from utils import *
 
@@ -10,7 +10,6 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
 flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
