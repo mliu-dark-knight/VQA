@@ -122,7 +122,6 @@ class DMN(BaseModel):
 			loss_m = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
 			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
 			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
-			# tf.summary.scalar('Cross_Entropy', loss)
 
 		with tf.name_scope('Accuracy'):
 			self.predicts_t = tf.cast(tf.argmax(type, 1), 'int32')
@@ -136,6 +135,17 @@ class DMN(BaseModel):
 		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
 		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
+
+		tf.summary.scalar("accuracy_t", self.accuracy_t)
+		tf.summary.scalar("accuracy_b", self.accuracy_b)
+		tf.summary.scalar("accuracy_m", self.accuracy_m)
+
+		tf.summary.scalar("loss_t", loss_t)
+		tf.summary.scalar("loss_b", loss_b)
+		tf.summary.scalar("loss_m", loss_m)
+
+		tf.summary.scalar("total_loss_b", total_loss_b)
+		tf.summary.scalar("total_loss_m", total_loss_m)
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -175,7 +185,7 @@ class DMN(BaseModel):
 				else:
 					with tf.variable_scope(scope, reuse=False):
 						memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate',
-						                         suffix=str(t), bn=False)
+						                         suffix=str(t))
 
 				h_q = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention',
 				                      activation='tanh')

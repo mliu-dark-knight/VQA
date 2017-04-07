@@ -1,4 +1,4 @@
-import sys
+import sys, datetime, time
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
@@ -9,13 +9,17 @@ class BaseModel(object):
         self.params = params
         self.words = words
         self.save_dir = params.save_dir
+        self.starttime_init = time.time()
 
         with tf.variable_scope('DMN'):
             print("Building DMN...")
             self.global_step = tf.Variable(0, name='global_step', trainable=False)
             self.build()
             self.saver = tf.train.Saver()
-            self.merged_summary_op = tf.summary.merge_all()
+
+            # for var in tf.trainable_variables():
+            #     tf.summary.histogram(var.name, var)
+            # self.merged_summary_op = tf.summary.merge_all()
 
 
     def build(self):
@@ -48,15 +52,17 @@ class BaseModel(object):
                 ret_list += [[], [], 0.0]
         return ret_list
 
-    def train(self, sess, train_data):
+    def train(self, sess, train_data, val_data):
         for epoch in tqdm(range(self.params.num_epochs), desc='Epoch', maxinterval=10000, ncols=100):
             for step in tqdm(range(self.params.num_steps), desc='Step', maxinterval=10000, ncols=100):
                 batch = train_data.next_batch()
                 self.train_batch(sess, batch)
 
-            self.eval(sess, train_data)
-            # if epoch % self.params.save_period == 0:
-            #     self.save(sess)
+            self.eval(sess, val_data)
+            if epoch % self.params.save_period == 0:
+                self.save(sess)
+                print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
+                      str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
 
         print('Training complete.')
 
@@ -65,11 +71,11 @@ class BaseModel(object):
         predicts_tb, predicts_b, accuracy_b, predicts_tm, predicts_m, accuracy_m = self.test_batch(sess, batch)
         (Anns_b, Is_b, _, _, _, Anns_m, Is_m, _, _, _) = batch
         for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
-            eval_data.visualize(Ann, I)
+            #eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
         tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
         for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
-            eval_data.visualize(Ann, I)
+            #eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
         tqdm.write('Accuracy (other): %f' % accuracy_m)
 

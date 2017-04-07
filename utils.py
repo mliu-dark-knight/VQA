@@ -6,31 +6,45 @@ import skimage.io as io
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
+from multiprocessing import Queue, Process
 
-dataDir = 'VQA'
+
+dataDir = '/home/victor/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubType = 'val2014'
-annFile = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubType)
-quesFile = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubType)
-imgDir = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubType)
-featDir = '%s/Features/%s/%s/' %(dataDir, dataType, dataSubType)
-annFile = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubType)
-quesFile = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubType)
+dataSubTypeTrain = 'train2014'
+annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeTrain)
+quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeTrain)
+imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
+featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
+
+dataSubTypeVal = 'train2014'
+annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeVal)
+quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeVal)
+imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
+featDirVal = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 
 
 class DataSet:
-    def __init__(self, word2vec, params):
+    def __init__(self, word2vec, params, type, num_threads=4):
         assert params.dataset_size is None or params.batch_size <= params.dataset_size, 'batch size cannot be greater than data size.'
+        assert type == 'train' or type == 'val'
+        self.type = type
         self.batch_size = params.batch_size
         self.dataset_size = params.dataset_size
         self.max_ques_size = params.max_ques_size
         self.word2vec = word2vec
-        self.vqa = VQA(annFile, quesFile)
+        if(self.type == 'train'):
+            self.vqa = VQA(annFileTrain, quesFileTrain)
+        elif(self.type == 'val'):
+            self.vqa = VQA(annFileVal, quesFileVal)
         self.anns = self.load_QA()
+        self.queue = Queue(maxsize=2 * num_threads)
+        for i in range(0, num_threads):
+            Process(target=self.next_batch_thread).start()
 
     def load_QA(self):
-        annIds = self.vqa.getQuesIds(imgIds=[42, 73, 74, 133, 136, 139, 143, 164, 192, 196])
+        annIds = self.vqa.getQuesIds()
         if self.dataset_size is not None:
             annIds = annIds[:self.dataset_size]
         return self.vqa.loadQA(annIds)
@@ -56,33 +70,47 @@ class DataSet:
         plt.show()
 
     def next_batch(self, visualize=False):
-        Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}
-        while len(Is['b']) + len(Is['m']) < self.batch_size:
-            randomAnn = random.choice(self.anns)
-            imgId = randomAnn['image_id']
-            imgFilename = 'COCO_' + dataSubType + '_'+ str(imgId).zfill(12) + '.jpg'
-            featFilename = 'COCO_' + dataSubType + '_' + str(imgId).zfill(12) + '.npy'
-            try:
-                I, X = io.imread(imgDir + imgFilename), np.load(featDir + featFilename)
-                Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
-                A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
-            except:
-                continue
-            if randomAnn['answer_type'] == 'yes/no':
-                type = 'b'
-                A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
-            else:
-                type = 'm'
-            Anns[type].append(randomAnn)
-            Is[type].append(I)
-            Xs[type].append(X)
-            Qs[type].append(Q)
-            As[type].append(A)
-            if visualize:
-                self.visualize(randomAnn, I)
+        return self.queue.get()
 
-        return (np.array(Anns['b']), np.array(Is['b']), np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
-                np.array(Anns['m']), np.array(Is['m']), np.array(Xs['m']), np.array(Qs['m']), np.array(As['m']))
+    def next_batch_thread(self, visualize=False):
+        while True:
+            Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [],
+                                                                                                                'm': []}
+            for randomAnn in random.choices(self.anns, k=self.batch_size):
+                imgId = randomAnn['image_id']
+                if (self.type == 'train'):
+                    imgFilename = 'COCO_' + dataSubTypeTrain + '_' + str(imgId).zfill(12) + '.jpg'
+                    featFilename = 'COCO_' + dataSubTypeTrain + '_' + str(imgId).zfill(12) + '.npy'
+                elif (self.type == 'val'):
+                    imgFilename = 'COCO_' + dataSubTypeVal + '_' + str(imgId).zfill(12) + '.jpg'
+                    featFilename = 'COCO_' + dataSubTypeVal + '_' + str(imgId).zfill(12) + '.npy'
+
+                try:
+                    if (self.type == 'train'):
+                        I, X = io.imread(imgDirTrain + imgFilename), np.load(featDirTrain + featFilename)
+                    elif (self.type == 'val'):
+                        I, X = io.imread(imgDirVal + imgFilename), np.load(featDirVal + featFilename)
+
+                    Q = np.stack(
+                        [self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
+                    A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
+                except:
+                    continue
+                if randomAnn['answer_type'] == 'yes/no':
+                    type = 'b'
+                    A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
+                else:
+                    type = 'm'
+                if visualize:
+                    self.visualize(randomAnn, I)
+                Anns[type].append(randomAnn)
+                Is[type].append(I)
+                Xs[type].append(X)
+                Qs[type].append(Q)
+                As[type].append(A)
+
+            self.queue.put((np.array(Anns['b']), np.array(Is['b']), np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
+                np.array(Anns['m']), np.array(Is['m']), np.array(Xs['m']), np.array(Qs['m']), np.array(As['m'])))
 
 
 class WordTable:
