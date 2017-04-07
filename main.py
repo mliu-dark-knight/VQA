@@ -44,13 +44,13 @@ FLAGS = flags.FLAGS
 def main(_):
 	word2vec = WordTable(FLAGS.glove_dim)
 	FLAGS.vocab_size = word2vec.vocab_size
-    dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
-    val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
+	dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
+	val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
 	with tf.Session() as sess:
 		model = DMN(FLAGS, None)
 		sess.run(tf.global_variables_initializer())
 		summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
-        model.train(sess, dataset, val_dataset)
+		model.train(sess, dataset, val_dataset)
 
 if __name__ == '__main__':
 	tf.app.run()
