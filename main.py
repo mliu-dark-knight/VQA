@@ -1,3 +1,5 @@
+import datetime
+
 import tensorflow as tf
 
 from DMN_plus import DMN
@@ -10,12 +12,12 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 32, 'Batch size during training and testing')
+flags.DEFINE_integer('batch_size', 45, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 10000000, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 1000, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 25, 'Number of steps per epoch')
+flags.DEFINE_integer('num_steps', 100, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
-flags.DEFINE_integer('save_period', 80, 'Save period [80]')
+flags.DEFINE_integer('save_period', 3, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
 flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
 
@@ -29,7 +31,7 @@ flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
 flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
 flags.DEFINE_string('attention', 'soft', 'Attention mechanism')
 flags.DEFINE_float('epsilon', 0.01, 'Annealing parameter for attention softmax')
-flags.DEFINE_integer('max_ques_size', 10, 'Max length of question')
+flags.DEFINE_integer('max_ques_size', 30, 'Max length of question')
 flags.DEFINE_float('lambda_r', 0.0, 'Regularization weight')
 flags.DEFINE_float('lambda_t', 0.0, 'Question type weight')
 flags.DEFINE_boolean('quasi_rnn', True, 'Use quasi rnn')
@@ -42,15 +44,63 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-	word2vec = WordTable(FLAGS.glove_dim)
-	FLAGS.vocab_size = word2vec.vocab_size
-	dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
-	val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
-	with tf.Session() as sess:
-		model = DMN(FLAGS, None)
-		sess.run(tf.global_variables_initializer())
-		summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
-		model.train(sess, dataset, val_dataset)
+	try:
+		# FLAGS.attention = FLAGS_cmd.attn
+		# FLAGS.hidden_dim = FLAGS_cmd.hidden_dim
+		# FLAGS.memory_update = FLAGS_cmd.memory_update
+		# FLAGS.pooling = FLAGS_cmd.pooling
+		# FLAGS.rnn_layer = FLAGS_cmd.rnn_layer
+		FLAGS.save_dir = "model_" + FLAGS.attention + "_" + str(FLAGS.hidden_dim) + "_" + \
+						 str(FLAGS.memory_update) + "_" + FLAGS.pooling + "_" + \
+						 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "/"
+
+		os.makedirs(FLAGS.save_dir, exist_ok=True)
+		word2vec = WordTable(FLAGS.glove_dim)
+		FLAGS.vocab_size = word2vec.vocab_size
+		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
+		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
+		with tf.Session() as sess:
+			model = DMN(FLAGS, None)
+			sess.run(tf.global_variables_initializer())
+			summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
+			model.train(sess, dataset, val_dataset)
+	except:
+		pass
+	finally:
+		dataset.kill()
+		val_dataset.kill()
 
 if __name__ == '__main__':
+	# parser = argparse.ArgumentParser()
+	# parser.add_argument(
+	# 	'attn',
+	# 	type=str,
+	# 	help='soft or gru'
+	# )
+	# parser.add_argument(
+	# 	'memory_update',
+	# 	type=str,
+	# 	help='relu or gru'
+	# )
+	# parser.add_argument(
+	# 	'quasi_rnn',
+	# 	type=bool,
+	# 	help='T or F'
+	# )
+	# parser.add_argument(
+	# 	'pooling',
+	# 	type=str,
+	# 	help='_fo or _ifo'
+	# )
+	# parser.add_argument(
+	# 	'hidden_dim',
+	# 	type=int,
+	# 	help='50-5000'
+	# )
+	# # parser.add_argument(
+	# # 	'rnn_layer',
+	# # 	type=int,
+	# # 	help='batch_size'
+	# # )
+	# FLAGS_cmd, unparsed = parser.parse_known_args()
 	tf.app.run()
