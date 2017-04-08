@@ -7,7 +7,6 @@ from multiprocessing import Queue, Process
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
-
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
 dataDir = '/home/victor/VQA'
@@ -27,9 +26,10 @@ featDirVal = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 
 
 class DataSet:
-	def __init__(self, word2vec, params, type, num_threads=6):
+	def __init__(self, word2vec, params, type, num_threads=6, q_max=15):
 		assert params.dataset_size is None or params.batch_size <= params.dataset_size, 'batch size cannot be greater than data size.'
-		assert type == 'train' or type == 'val'
+		assert type == 'train' or type == 'val', 'bad data type'
+		assert num_threads > 0, 'lol no threads'
 		self.type = type
 		self.batch_size = params.batch_size
 		self.dataset_size = params.dataset_size
@@ -40,9 +40,15 @@ class DataSet:
 		elif (self.type == 'val'):
 			self.vqa = VQA(annFileVal, quesFileVal)
 		self.anns = self.load_QA()
-		self.queue = Queue(maxsize=self.batch_size * num_threads)
+		self.q_max = q_max
+		self.queue = Queue(maxsize=self.q_max)
+		self.counter = 0
+		self.num_threads = num_threads
+		self.start()
+
+	def start(self):
 		self.process_list = []
-		for i in range(0, num_threads):
+		for i in range(0, self.num_threads):
 			self.process_list.append(Process(target=self.next_batch_thread))
 
 		for proc in self.process_list:
@@ -79,6 +85,13 @@ class DataSet:
 		plt.show()
 
 	def next_batch(self, visualize=False):
+		self.counter += 1
+		if (self.counter % 1000 == 0):
+			self.kill()
+			del self.queue
+			self.queue = Queue(maxsize=self.q_max)
+			self.start()
+
 		return self.queue.get()
 
 	def next_batch_thread(self, visualize=False):
