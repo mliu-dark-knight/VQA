@@ -58,7 +58,7 @@ def main(_):
 		word2vec = WordTable(FLAGS.glove_dim)
 		FLAGS.vocab_size = word2vec.vocab_size
 		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
-		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
+		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val', num_threads=1)
 		with tf.Session() as sess:
 			model = DMN(FLAGS, None)
 			sess.run(tf.global_variables_initializer())

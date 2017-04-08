@@ -27,7 +27,7 @@ featDirVal = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 
 
 class DataSet:
-	def __init__(self, word2vec, params, type, num_threads=4):
+	def __init__(self, word2vec, params, type, num_threads=6):
 		assert params.dataset_size is None or params.batch_size <= params.dataset_size, 'batch size cannot be greater than data size.'
 		assert type == 'train' or type == 'val'
 		self.type = type
@@ -40,7 +40,7 @@ class DataSet:
 		elif (self.type == 'val'):
 			self.vqa = VQA(annFileVal, quesFileVal)
 		self.anns = self.load_QA()
-		self.queue = Queue(maxsize=2 * num_threads)
+		self.queue = Queue(maxsize=self.batch_size * num_threads)
 		self.process_list = []
 		for i in range(0, num_threads):
 			self.process_list.append(Process(target=self.next_batch_thread))
