@@ -42,7 +42,6 @@ flags.DEFINE_integer('rnn_layer', 2, 'Number of layers in question encoder')
 
 FLAGS = flags.FLAGS
 
-
 def main(_):
 	try:
 		# FLAGS.attention = FLAGS_cmd.attn
@@ -56,9 +55,10 @@ def main(_):
 
 		os.makedirs(FLAGS.save_dir, exist_ok=True)
 		word2vec = WordTable(FLAGS.glove_dim)
+
 		FLAGS.vocab_size = word2vec.vocab_size
 		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
-		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val', num_threads=1)
+		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
 		with tf.Session() as sess:
 			model = DMN(FLAGS, None)
 			sess.run(tf.global_variables_initializer())

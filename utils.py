@@ -1,8 +1,9 @@
 import os
 import pickle
+import queue
 import random
+import threading
 from collections import defaultdict
-from multiprocessing import Queue, Process
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,13 +11,20 @@ import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
 dataDir = '/home/victor/VQA'
+dataDir1 = '/home/victor/VQA'
+dataDir2 = '/media/victor/320/VQA'
+dataDir3 = '/media/victor/Data/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
 dataSubTypeTrain = 'train2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeTrain)
-imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
-featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
+imgDirTrain1 = '%s/Images/%s/%s/' % (dataDir1, dataType, dataSubTypeTrain)
+featDirTrain1 = '%s/Features/%s/%s/' % (dataDir1, dataType, dataSubTypeTrain)
+imgDirTrain2 = '%s/Images/%s/%s/' % (dataDir2, dataType, dataSubTypeTrain)
+featDirTrain2 = '%s/Features/%s/%s/' % (dataDir2, dataType, dataSubTypeTrain)
+imgDirTrain3 = '%s/Images/%s/%s/' % (dataDir3, dataType, dataSubTypeTrain)
+featDirTrain3 = '%s/Features/%s/%s/' % (dataDir3, dataType, dataSubTypeTrain)
 
 dataSubTypeVal = 'train2014'
 annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeVal)
@@ -41,22 +49,36 @@ class DataSet:
 			self.vqa = VQA(annFileVal, quesFileVal)
 		self.anns = self.load_QA()
 		self.q_max = q_max
-		self.queue = Queue(maxsize=self.q_max)
+		self.queue = queue.Queue(maxsize=self.q_max)
 		self.counter = 0
 		self.num_threads = num_threads
 		self.start()
 
 	def start(self):
 		self.process_list = []
-		for i in range(0, self.num_threads):
-			self.process_list.append(Process(target=self.next_batch_thread))
+		if (self.num_threads == 1):
+			self.process_list.append(
+				threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain1,
+																		'featDirTrain': featDirTrain1}))
+		else:
+			for i in range(0, 8):
+				self.process_list.append(
+					threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain1,
+																			'featDirTrain': featDirTrain1}))
+				self.process_list.append(
+					threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain2,
+																			'featDirTrain': featDirTrain2}))
+				if (i % 3 == 0):
+					self.process_list.append(
+						threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain3,
+																				'featDirTrain': featDirTrain3}))
 
 		for proc in self.process_list:
 			proc.start()
 
 	def kill(self):
 		for proc in self.process_list:
-			proc.terminate()
+			proc.join()
 
 	def load_QA(self):
 		annIds = self.vqa.getQuesIds()
@@ -85,16 +107,16 @@ class DataSet:
 		plt.show()
 
 	def next_batch(self, visualize=False):
-		self.counter += 1
-		if (self.counter % 1000 == 0):
-			self.kill()
-			del self.queue
-			self.queue = Queue(maxsize=self.q_max)
-			self.start()
+		# self.counter += 1
+		# if (self.counter % 1000 == 0):
+		# 	self.kill()
+		# 	del self.queue
+		# 	self.queue = queue.Queue(maxsize=self.q_max)
+		# 	self.start()
 
 		return self.queue.get()
 
-	def next_batch_thread(self, visualize=False):
+	def next_batch_thread(self, imgDirTrain, featDirTrain, visualize=False):
 		while True:
 			Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {
 				'b': [],
@@ -117,7 +139,8 @@ class DataSet:
 					Q = np.stack(
 						[self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
-				except:
+				except Exception as e:
+					#print('Warning! Exception: '+ str(e))
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
