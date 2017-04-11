@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 from DMN import BaseModel
 from NN import *
 
@@ -138,15 +139,15 @@ class DMN(BaseModel):
 		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
 
 		tf.summary.scalar("accuracy_t", self.accuracy_t)
-		tf.summary.scalar("accuracy_b", self.accuracy_b)
-		tf.summary.scalar("accuracy_m", self.accuracy_m)
+		tf.summary.scalar("accuracy_b", self.accuracy_b, collections=['b_stuff'])
+		tf.summary.scalar("accuracy_m", self.accuracy_m, collections=['m_stuff'])
 
 		tf.summary.scalar("loss_t", loss_t)
-		tf.summary.scalar("loss_b", loss_b)
-		tf.summary.scalar("loss_m", loss_m)
+		tf.summary.scalar("loss_b", loss_b, collections=['b_stuff'])
+		tf.summary.scalar("loss_m", loss_m, collections=['m_stuff'])
 
-		tf.summary.scalar("total_loss_b", total_loss_b)
-		tf.summary.scalar("total_loss_m", total_loss_m)
+		tf.summary.scalar("total_loss_b", total_loss_b, collections=['b_stuff'])
+		tf.summary.scalar("total_loss_m", total_loss_m, collections=['m_stuff'])
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())

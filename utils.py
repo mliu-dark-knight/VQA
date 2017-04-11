@@ -61,17 +61,16 @@ class DataSet:
 				threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain1,
 																		'featDirTrain': featDirTrain1}))
 		else:
-			for i in range(0, 8):
+			for i in range(0, 4):
 				self.process_list.append(
 					threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain1,
 																			'featDirTrain': featDirTrain1}))
 				self.process_list.append(
 					threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain2,
 																			'featDirTrain': featDirTrain2}))
-				if (i % 3 == 0):
-					self.process_list.append(
-						threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain3,
-																				'featDirTrain': featDirTrain3}))
+			# self.process_list.append(
+			# 		threading.Thread(target=self.next_batch_thread, kwargs={'imgDirTrain': imgDirTrain3,
+			# 																'featDirTrain': featDirTrain3}))
 
 		for proc in self.process_list:
 			proc.start()

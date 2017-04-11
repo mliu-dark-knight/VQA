@@ -12,10 +12,10 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 45, 'Batch size during training and testing')
+flags.DEFINE_integer('batch_size', 100, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 10000000, 'Maximum data point')
-flags.DEFINE_integer('num_epochs', 1000, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 100, 'Number of steps per epoch')
+flags.DEFINE_integer('num_epochs', 20000, 'Number of epochs for training')
+flags.DEFINE_integer('num_steps', 25, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 3, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
@@ -51,21 +51,19 @@ def main(_):
 		# FLAGS.rnn_layer = FLAGS_cmd.rnn_layer
 		FLAGS.save_dir = "model_" + FLAGS.attention + "_" + str(FLAGS.hidden_dim) + "_" + \
 						 str(FLAGS.memory_update) + "_" + FLAGS.pooling + "_" + \
-						 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "/"
+						 datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + "/"
 
 		os.makedirs(FLAGS.save_dir, exist_ok=True)
 		word2vec = WordTable(FLAGS.glove_dim)
 
 		FLAGS.vocab_size = word2vec.vocab_size
-		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
+		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train', q_max=50)
 		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
 		with tf.Session() as sess:
 			model = DMN(FLAGS, None)
-			sess.run(tf.global_variables_initializer())
-			summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
-			model.train(sess, dataset, val_dataset)
-	except:
-		pass
+			summary_writer = tf.summary.FileWriter(FLAGS.save_dir + "Log", graph=sess.graph)
+			sess.run([tf.local_variables_initializer(), tf.global_variables_initializer()])
+			model.train(sess, dataset, val_dataset, summary_writer)
 	finally:
 		dataset.kill()
 		val_dataset.kill()
