@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 from DMN import BaseModel
 from NN import *
 

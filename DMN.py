@@ -1,5 +1,7 @@
 from __future__ import print_function
-import sys, datetime, time
+import datetime
+import sys
+import time
 import numpy as np
 import tensorflow as tf
 from tqdm import tqdm
@@ -37,14 +39,17 @@ class BaseModel(object):
             answer = self.answer_m
         return {self.input: Xs, self.question: Qs, self.type: type, answer: As}
 
-    def train_batch(self, sess, batch):
-        for (type, gradient_descent) in [('b', self.gradient_descent_b), ('m', self.gradient_descent_m)]:
+    def train_batch(self, sess, batch, sum_writer):
+        for (type, gradient_descent, summary_op_for_that_type) in [
+            ('b', self.gradient_descent_b, self.merged_summary_op_b_loss),
+            ('m', self.gradient_descent_m, self.merged_summary_op_m_loss)]:
             feed_dict = self.get_feed_dict(batch, type, sess)
-            gradients = sess.run(self.debug, feed_dict=feed_dict)
-            print('gradients:')
-            print(gradients)
             if len(feed_dict[self.type]) > 0:
-                sess.run([gradient_descent, self.global_step], feed_dict=feed_dict)
+                _, global_step, summary_all, specialized_summary = sess.run(
+                    [gradient_descent, self.global_step, self.merged_summary_op, summary_op_for_that_type],
+                    feed_dict=feed_dict)
+                sum_writer.add_summary(summary_all, global_step=global_step)
+                sum_writer.add_summary(specialized_summary, global_step=global_step)
 
     def test_batch(self, sess, batch):
         ret_list = []
