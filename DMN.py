@@ -46,8 +46,6 @@ class BaseModel(object):
             ('b', self.gradient_descent_b, self.merged_summary_op_b_loss),
             ('m', self.gradient_descent_m, self.merged_summary_op_m_loss)]:
             feed_dict = self.get_feed_dict(batch, type, sess)
-            gradient = sess.run(self.debug, feed_dict=feed_dict)
-            print(gradient)
             if len(feed_dict[self.type]) > 0:
                 _, global_step, summary_all, specialized_summary = sess.run(
                     [gradient_descent, self.global_step, self.merged_summary_op, summary_op_for_that_type],

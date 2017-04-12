@@ -9,14 +9,14 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 100, 'Batch size during training and testing')
-flags.DEFINE_integer('dataset_size', 1000, 'Maximum data point')
-flags.DEFINE_integer('num_epochs', 200, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 20, 'Number of steps per epoch')
+flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
+flags.DEFINE_integer('dataset_size', 10, 'Maximum data point')
+flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
+flags.DEFINE_integer('num_steps', 1, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 3, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
-flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
+flags.DEFINE_float('decay_rate', 0.01, 'Decay rate')
 
 # model params
 flags.DEFINE_integer('memory_step', 3, 'Episodic Memory steps')
