@@ -134,19 +134,18 @@ class DMN(BaseModel):
 
 		learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
 		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+		debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
+		self.debug = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
+
 		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
 		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
 
-		tf.summary.scalar("accuracy_t", self.accuracy_t)
-		tf.summary.scalar("accuracy_b", self.accuracy_b)
-		tf.summary.scalar("accuracy_m", self.accuracy_m)
+		for scalar in ['accuracy_t', 'accuracy_b', 'accuracy_m']:
+			tf.summary.scalar(scalar, getattr(self, scalar))
 
-		tf.summary.scalar("loss_t", loss_t)
-		tf.summary.scalar("loss_b", loss_b)
-		tf.summary.scalar("loss_m", loss_m)
-
-		tf.summary.scalar("total_loss_b", total_loss_b)
-		tf.summary.scalar("total_loss_m", total_loss_m)
+		for scalar in ['loss_t', 'loss_b', 'loss_m', 'total_loss_b', 'total_loss_m']:
+			tf.summary.scalar(scalar, locals()[scalar])
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -157,7 +156,7 @@ class DMN(BaseModel):
 		return tf.reshape(facts, [-1, self.params.img_size, self.params.hidden_dim])
 
 	def build_question(self):
-		with tf.name_scope('Question_Embedding'):
+		with tf.variable_scope('Question_Embedding'):
 			if self.params.quasi_rnn:
 				rnn_inputs = self.question
 				for _ in range(self.params.rnn_layer):
@@ -170,12 +169,12 @@ class DMN(BaseModel):
 		return question_vecs
 
 	def build_type(self, question):
-		with tf.name_scope('Question_Type'):
+		with tf.variable_scope('Question_Type'):
 			return fully_connected(question, 2, 'Type', activation=None, bn=False)
 
 	def build_memory(self, questions, facts):
 		with tf.variable_scope('Memory') as scope:
-			question = tf.identity(tf.unstack(questions, axis=1)[-1])
+			question = tf.unstack(questions, axis=1)[-1]
 			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention, self.params.epsilon)
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
@@ -197,5 +196,5 @@ class DMN(BaseModel):
 		return memory
 
 	def build_logits(self, memory, vocab_size, prefix):
-		with tf.name_scope('Answer'):
+		with tf.variable_scope('Answer'):
 			return fully_connected(memory, vocab_size, prefix, activation=None, bn=False)

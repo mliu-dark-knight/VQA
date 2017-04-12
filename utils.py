@@ -1,15 +1,14 @@
 import os
 import pickle
-import random
 from collections import defaultdict
 from multiprocessing import Queue, Process
-
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = '/home/victor/VQA'
+
+dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
 dataSubTypeTrain = 'train2014'
@@ -18,7 +17,7 @@ quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dat
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 
-dataSubTypeVal = 'train2014'
+dataSubTypeVal = 'val2014'
 annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeVal)
 quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeVal)
 imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
@@ -26,7 +25,7 @@ featDirVal = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 
 
 class DataSet:
-	def __init__(self, word2vec, params, type, num_threads=6, q_max=15):
+	def __init__(self, word2vec, params, type, num_threads=1, q_max=1):
 		assert params.dataset_size is None or params.batch_size <= params.dataset_size, 'batch size cannot be greater than data size.'
 		assert type == 'train' or type == 'val', 'bad data type'
 		assert num_threads > 0, 'lol no threads'
@@ -99,7 +98,7 @@ class DataSet:
 			Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {
 				'b': [],
 				'm': []}
-			for randomAnn in random.choices(self.anns, k=self.batch_size):
+			for randomAnn in np.random.choice(self.anns, size=self.batch_size):
 				imgId = randomAnn['image_id']
 				if (self.type == 'train'):
 					imgFilename = 'COCO_' + dataSubTypeTrain + '_' + str(imgId).zfill(12) + '.jpg'
@@ -139,7 +138,7 @@ class DataSet:
 
 class WordTable:
 	def __init__(self, dim):
-		self.word2vec = WordTable.load_glove(dim)
+		self.word2vec = self.load_glove(dim)
 		self.dim = dim
 		self.vocab_size = len(self.word2vec)
 		self.index_word()
@@ -166,16 +165,15 @@ class WordTable:
 	def index_to_word(self, index):
 		return self.idx2word[index]
 
-	@staticmethod
-	def load_glove(dim):
+	def load_glove(self, dim):
 		word2vec = {}
 
 		path = "VQA/PythonHelperTools/glove.6B/glove.6B." + str(dim) + 'd'
-		if os.path.exists(path + '.cache'):
+		try:
 			with open(path + '.cache', 'rb') as cache_file:
 				word2vec = pickle.load(cache_file)
 
-		else:
+		except:
 			# Load n create cache
 			with open(path + '.txt') as f:
 				for line in f:

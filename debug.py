@@ -1,7 +1,6 @@
-import datetime
+import numpy as np
 import tensorflow as tf
 from DMN_plus import DMN
-from utils import *
 
 flags = tf.app.flags
 
@@ -10,8 +9,8 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
-flags.DEFINE_integer('dataset_size', 100, 'Maximum data point')
+flags.DEFINE_integer('batch_size', 1, 'Batch size during training and testing')
+flags.DEFINE_integer('dataset_size', 1, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
 flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
@@ -23,10 +22,10 @@ flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
 flags.DEFINE_integer('memory_step', 3, 'Episodic Memory steps')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru')
 flags.DEFINE_integer('glove_dim', 50, 'GloVe size - Only used in dmn')
-flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size')
-flags.DEFINE_integer('hidden_dim', 100, 'Size of hidden units')
-flags.DEFINE_integer('channel_dim', 512, 'Number of channels')
-flags.DEFINE_integer('img_size', 7 * 7, 'Image feature size')
+flags.DEFINE_integer('vocab_size', 100, 'Vocabulary size')
+flags.DEFINE_integer('hidden_dim', 10, 'Size of hidden units')
+flags.DEFINE_integer('channel_dim', 16, 'Number of channels')
+flags.DEFINE_integer('img_size', 3 * 3, 'Image feature size')
 flags.DEFINE_string('attention', 'soft', 'Attention mechanism')
 flags.DEFINE_float('epsilon', 0.01, 'Annealing parameter for attention softmax')
 flags.DEFINE_integer('max_ques_size', 10, 'Max length of question')
@@ -40,30 +39,24 @@ flags.DEFINE_integer('rnn_layer', 2, 'Number of layers in question encoder')
 
 FLAGS = flags.FLAGS
 
+class FakeDataSet(object):
+    def __init__(self):
+        pass
+
+    def next_batch(self):
+        return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+                np.random.rand([FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim]), np.random.randint(FLAGS.vocab_size, FLAGS.batch_size),
+                np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+                np.random.rand([FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim]), np.random.randint(FLAGS.vocab_size, FLAGS.batch_size)]
+
+
 
 def main(_):
-	try:
-		FLAGS.save_dir = "model_" + FLAGS.attention + "_" + str(FLAGS.hidden_dim) + "_" + \
-						 str(FLAGS.memory_update) + "_" + FLAGS.pooling + "_" + \
-						 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "/"
-		os.makedirs(FLAGS.save_dir, exist_ok=True)
-		word2vec = WordTable(FLAGS.glove_dim)
-		FLAGS.vocab_size = word2vec.vocab_size
-		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train')
-		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val', num_threads=1)
-
-		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val')
-		val_dataset = None
-		with tf.Session() as sess:
-			model = DMN(FLAGS, None)
-			sess.run(tf.global_variables_initializer())
-			summary_writer = tf.summary.FileWriter('log', graph=sess.graph)
-			model.train(sess, dataset, val_dataset)
-	except:
-		pass
-	finally:
-		dataset.kill()
-		val_dataset.kill()
+    dataset = FakeDataSet()
+    with tf.Session() as sess:
+        model = DMN(FLAGS, None)
+        sess.run(tf.global_variables_initializer())
+        model.train(sess, dataset, dataset)
 
 if __name__ == '__main__':
 	tf.app.run()

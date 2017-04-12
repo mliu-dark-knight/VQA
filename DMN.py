@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, datetime, time
 import numpy as np
 import tensorflow as tf
@@ -39,6 +40,9 @@ class BaseModel(object):
     def train_batch(self, sess, batch):
         for (type, gradient_descent) in [('b', self.gradient_descent_b), ('m', self.gradient_descent_m)]:
             feed_dict = self.get_feed_dict(batch, type, sess)
+            gradients = sess.run(self.debug, feed_dict=feed_dict)
+            print('gradients:')
+            print(gradients)
             if len(feed_dict[self.type]) > 0:
                 sess.run([gradient_descent, self.global_step], feed_dict=feed_dict)
 

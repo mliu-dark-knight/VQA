@@ -21,6 +21,7 @@ import datetime
 import json
 
 
+
 class VQA:
     def __init__(self, annotation_file=None, question_file=None):
         """
