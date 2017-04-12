@@ -8,7 +8,7 @@ import numpy as np
 import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = 'VQA'
+dataDir = '/home/victor/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
 dataSubTypeTrain = 'val2014'
@@ -75,6 +75,27 @@ class DataSet:
 			if len(answer['answer'].split()) == 1:
 				ans_dict[answer['answer']] += 1
 		return max(ans_dict, key=lambda k: ans_dict[k])
+
+	# def id_to_question(self, id=None):
+	# 	question = self.vqa.qqa[id]['question'][:-1].split()
+	# 	Q_strip_apostrophe = []
+	# 	for word in question:
+	# 		if word is None:
+	# 			Q_strip_apostrophe.append(word)
+	# 		else:
+	# 			for a in re.split(r"['/\\?!,-.\"]", word):
+	# 				if a is not '':
+	# 					Q_strip_apostrophe.append(a)
+	#
+	# 	return [None] * (self.max_ques_size - len(Q_strip_apostrophe)) + list(
+	# 		map(lambda str: str.lower(), Q_strip_apostrophe))
+	#
+	# def id_to_answer(self, id=None):
+	# 	ans_dict = defaultdict(lambda: 0)
+	# 	for answer in self.vqa.loadQA(id)[0]['answers']:
+	# 		if len(re.split(r"['/\\?!,-.\"]", answer['answer'])) == 1:
+	# 			ans_dict[answer['answer']] += 1
+	# 	return re.split(r"['/\\?!,-.\"]", str(max(ans_dict, key=lambda k: ans_dict[k])))[0]
 
 	def index_to_word(self, index):
 		return self.word2vec.index_to_word(index)
