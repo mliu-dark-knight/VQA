@@ -20,9 +20,11 @@ class BaseModel(object):
             self.build()
             self.saver = tf.train.Saver()
 
-            # for var in tf.trainable_variables():
-            #     tf.summary.histogram(var.name, var)
-            # self.merged_summary_op = tf.summary.merge_all()
+            for var in tf.trainable_variables():
+                tf.summary.histogram(var.name, var)
+            self.merged_summary_op = tf.summary.merge_all()
+            self.merged_summary_op_b_loss = tf.summary.merge_all(key='b_stuff')
+            self.merged_summary_op_m_loss = tf.summary.merge_all(key='m_stuff')
 
 
     def build(self):
@@ -44,6 +46,8 @@ class BaseModel(object):
             ('b', self.gradient_descent_b, self.merged_summary_op_b_loss),
             ('m', self.gradient_descent_m, self.merged_summary_op_m_loss)]:
             feed_dict = self.get_feed_dict(batch, type, sess)
+            gradient = sess.run(self.debug, feed_dict=feed_dict)
+            print(gradient)
             if len(feed_dict[self.type]) > 0:
                 _, global_step, summary_all, specialized_summary = sess.run(
                     [gradient_descent, self.global_step, self.merged_summary_op, summary_op_for_that_type],
@@ -61,11 +65,11 @@ class BaseModel(object):
                 ret_list += [[], [], 0.0]
         return ret_list
 
-    def train(self, sess, train_data, val_data):
+    def train(self, sess, train_data, val_data, sum_writer):
         for epoch in tqdm(range(self.params.num_epochs), desc='Epoch', maxinterval=10000, ncols=100):
             for step in tqdm(range(self.params.num_steps), desc='Step', maxinterval=10000, ncols=100):
                 batch = train_data.next_batch()
-                self.train_batch(sess, batch)
+                self.train_batch(sess, batch, sum_writer)
 
             self.eval(sess, val_data)
             if epoch % self.params.save_period == 0:

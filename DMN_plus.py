@@ -142,11 +142,16 @@ class DMN(BaseModel):
 		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
 		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
 
-		for scalar in ['accuracy_t', 'accuracy_b', 'accuracy_m']:
-			tf.summary.scalar(scalar, getattr(self, scalar))
+		tf.summary.scalar("accuracy_t", self.accuracy_t)
+		tf.summary.scalar("accuracy_b", self.accuracy_b, collections=['b_stuff'])
+		tf.summary.scalar("accuracy_m", self.accuracy_m, collections=['m_stuff'])
 
-		for scalar in ['loss_t', 'loss_b', 'loss_m', 'total_loss_b', 'total_loss_m']:
-			tf.summary.scalar(scalar, locals()[scalar])
+		tf.summary.scalar("loss_t", loss_t)
+		tf.summary.scalar("loss_b", loss_b, collections=['b_stuff'])
+		tf.summary.scalar("loss_m", loss_m, collections=['m_stuff'])
+
+		tf.summary.scalar("total_loss_b", total_loss_b, collections=['b_stuff'])
+		tf.summary.scalar("total_loss_m", total_loss_m, collections=['m_stuff'])
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -175,7 +180,7 @@ class DMN(BaseModel):
 
 	def build_memory(self, questions, facts):
 		with tf.variable_scope('Memory') as scope:
-			question = tf.unstack(questions, axis=1)[-1]
+			question = tf.identity(tf.unstack(questions, axis=1)[-1])
 			episode = EpisodeMemory(self.params.hidden_dim, facts, self.params.attention, self.params.epsilon)
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
