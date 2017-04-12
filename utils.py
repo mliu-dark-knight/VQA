@@ -1,12 +1,8 @@
-import os
 import pickle
-from collections import defaultdict
-from multiprocessing import Queue, Process
-import queue
-import random
 import threading
+from Queue import Queue
 from collections import defaultdict
-
+from multiprocessing import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
@@ -15,7 +11,7 @@ from VQA.PythonHelperTools.vqaTools.vqa import VQA
 dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'train2014'
+dataSubTypeTrain = 'val2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
@@ -44,7 +40,7 @@ class DataSet:
 			self.vqa = VQA(annFileVal, quesFileVal)
 		self.anns = self.load_QA()
 		self.q_max = q_max
-		self.queue = queue.Queue(maxsize=self.q_max)
+		self.queue = Queue(maxsize=self.q_max)
 		self.counter = 0
 		self.num_threads = num_threads
 		self.start()
@@ -63,7 +59,7 @@ class DataSet:
 			proc.join()
 
 	def load_QA(self):
-		annIds = self.vqa.getQuesIds()
+		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
 		if self.dataset_size is not None:
 			annIds = annIds[:self.dataset_size]
 		return self.vqa.loadQA(annIds)
@@ -93,9 +89,7 @@ class DataSet:
 
 	def next_batch_thread(self, imgDirTrain, featDirTrain, visualize=False):
 		while True:
-			Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {
-				'b': [],
-				'm': []}
+			Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [],'m': []}
 			for randomAnn in np.random.choice(self.anns, size=self.batch_size):
 				imgId = randomAnn['image_id']
 				if (self.type == 'train'):
@@ -111,11 +105,10 @@ class DataSet:
 					elif (self.type == 'val'):
 						I, X = io.imread(imgDirVal + imgFilename), np.load(featDirVal + featFilename)
 
-					Q = np.stack(
-						[self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
+					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
-					#print('Warning! Exception: '+ str(e))
+					#print('Warning! Exception: ' + str(e))
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
@@ -166,16 +159,15 @@ class WordTable:
 	def load_glove(self, dim):
 		word2vec = {}
 
-		path = "VQA/PythonHelperTools/glove.6B/glove.6B." + str(dim) + 'd'
+		path = 'VQA/PythonHelperTools/glove.6B/glove.6B.' + str(dim) + 'd'
 		try:
 			with open(path + '.cache', 'rb') as cache_file:
 				word2vec = pickle.load(cache_file)
 
 		except:
-			# Load n create cache
 			with open(path + '.txt') as f:
 				for line in f:
-					l = line.split()
+					l = line.rstrip().split()
 					word2vec[l[0]] = [float(x) for x in l[1:]]
 
 			with open(path + '.cache', 'wb') as cache_file:

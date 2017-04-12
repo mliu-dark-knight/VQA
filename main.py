@@ -1,4 +1,3 @@
-import datetime
 import tensorflow as tf
 from DMN_plus import DMN
 from utils import *
@@ -42,24 +41,17 @@ FLAGS = flags.FLAGS
 
 def main(_):
 	try:
-		FLAGS.save_dir = 'model_' + FLAGS.attention + '_' + str(FLAGS.hidden_dim) + '_' + \
-						 str(FLAGS.memory_update) + '_' + FLAGS.pooling + "_" + \
-						 datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S') + "/"
-
-		os.makedirs(FLAGS.save_dir, exist_ok=True)
 		word2vec = WordTable(FLAGS.glove_dim)
 
 		FLAGS.vocab_size = word2vec.vocab_size
-		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train', q_max=100)
-		val_dataset = DataSet(word2vec=word2vec, params=FLAGS, type='val', q_max=10)
+		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train', q_max=1)
 		with tf.Session() as sess:
 			model = DMN(FLAGS, None)
 			summary_writer = tf.summary.FileWriter(FLAGS.save_dir + 'log', graph=sess.graph)
 			sess.run([tf.local_variables_initializer(), tf.global_variables_initializer()])
-			model.train(sess, dataset, val_dataset, summary_writer)
+			model.train(sess, dataset, dataset, summary_writer)
 	finally:
 		dataset.kill()
-		val_dataset.kill()
 
 if __name__ == '__main__':
 	tf.app.run()
