@@ -1,17 +1,17 @@
 import pickle
-import threading
+import threading, re
 from queue import Queue
-# from Queue import Queue
 from collections import defaultdict
+from multiprocessing import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = 'VQA'
+dataDir = '/home/victor/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'val2014'
+dataSubTypeTrain = 'train2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
@@ -57,26 +57,46 @@ class DataSet:
 
 	def kill(self):
 		for proc in self.process_list:
-			proc.join()
+			proc.join(timeout=0.1)
 
 	def load_QA(self):
-		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
-		# annIds = self.vqa.getQuesIds()
-		if self.dataset_size is not None:
-			annIds = annIds[:self.dataset_size]
+		# annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
+		annIds = self.vqa.getQuesIds()
+		# if self.dataset_size is not None:
+		# 	annIds = annIds[:self.dataset_size]
 		return self.vqa.loadQA(annIds)
+
+	# def id_to_question(self, id=None):
+	# 	question = self.vqa.qqa[id]['question'][:-1].split()
+	# 	return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
+	#
+	# def id_to_answer(self, id=None):
+	# 	ans_dict = defaultdict(lambda: 0)
+	# 	for answer in self.vqa.loadQA(id)[0]['answers']:
+	# 		if len(answer['answer'].split()) == 1:
+	# 			ans_dict[answer['answer']] += 1
+	# 	return max(ans_dict, key=lambda k: ans_dict[k])
 
 	def id_to_question(self, id=None):
 		question = self.vqa.qqa[id]['question'][:-1].split()
-		return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
+		Q_strip_apostrophe = []
+		for word in question:
+			if word is None:
+				Q_strip_apostrophe.append(word)
+			else:
+				for a in re.split(r"['/\\?!,-.\"]", word):
+					if a is not '':
+						Q_strip_apostrophe.append(a)
+
+		return [None] * (self.max_ques_size - len(Q_strip_apostrophe)) + list(
+			map(lambda str: str.lower(), Q_strip_apostrophe))
 
 	def id_to_answer(self, id=None):
 		ans_dict = defaultdict(lambda: 0)
 		for answer in self.vqa.loadQA(id)[0]['answers']:
-			if len(answer['answer'].split()) == 1:
+			if len(re.split(r"['/\\?!,-.\"]", answer['answer'])) == 1:
 				ans_dict[answer['answer']] += 1
-		return max(ans_dict, key=lambda k: ans_dict[k])
-
+		return re.split(r"['/\\?!,-.\"]", str(max(ans_dict, key=lambda k: ans_dict[k])))[0]
 
 	def index_to_word(self, index):
 		return self.word2vec.index_to_word(index)
@@ -112,14 +132,18 @@ class DataSet:
 					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
+					# print(self.vqa.qqa[imgId]['question'][:-1])
+					# print(self.vqa.loadQA(imgId)[0]['answers'])
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
 					A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
 				elif randomAnn['question_type'] == 'how many':
 					type = 'n'
-					A = int(self.id_to_answer(randomAnn['question_id']))
-					if A >= self.params.num_range:
+					try:
+						A = int(self.id_to_answer(randomAnn['question_id']))
+						assert A >= self.params.num_range
+					except:
 						continue
 				else:
 					type = 'm'

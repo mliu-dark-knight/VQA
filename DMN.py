@@ -20,8 +20,8 @@ class Base(object):
             self.build()
             self.saver = tf.train.Saver()
 
-            for var in tf.trainable_variables():
-                tf.summary.histogram(var.name, var)
+            # for var in tf.trainable_variables():
+            #     tf.summary.histogram(var.name, var)
             self.merged_summary_op = tf.summary.merge_all()
             self.merged_summary_op_b_loss = tf.summary.merge_all(key='b_stuff')
             self.merged_summary_op_n_loss = tf.summary.merge_all(key='n_stuff')
@@ -52,10 +52,13 @@ class Base(object):
             ('n', self.gradient_descent_n, self.merged_summary_op_n_loss),
             ('m', self.gradient_descent_m, self.merged_summary_op_m_loss)]:
             feed_dict = self.get_feed_dict(batch, type, sess)
+      #      gradient = sess.run(getattr(self, 'debug_' + type), feed_dict=feed_dict)
+#            print(gradient)
             if len(feed_dict[self.type]) > 0:
                 _, global_step, summary_all, specialized_summary = sess.run(
                     [gradient_descent, self.global_step, self.merged_summary_op, summary_op_for_that_type],
-                    feed_dict=feed_dict)
+                    feed_dict=feed_dict) #  options=tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE),
+            #run_metadata=run_metadata)
                 sum_writer.add_summary(summary_all, global_step=global_step)
                 sum_writer.add_summary(specialized_summary, global_step=global_step)
 
@@ -92,15 +95,15 @@ class Base(object):
             self.test_batch(sess, batch)
         (Anns_b, Is_b, _, _, _, Anns_n, Is_n, _, _, _, Anns_m, Is_m, _, _, _) = batch
         for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
-            eval_data.visualize(Ann, I)
+           # eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
         tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
         for predict, Ann, I in zip(predicts_b, Anns_n, Is_n):
-            eval_data.visualize(Ann, I)
+           # eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %d' % (predict))
         tqdm.write('Accuracy (how many): %f' % accuracy_n)
         for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
-            eval_data.visualize(Ann, I)
+           # eval_data.visualize(Ann, I)
             tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
         tqdm.write('Accuracy (other): %f' % accuracy_m)
 

@@ -142,7 +142,8 @@ class DMN(Base):
 		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
 		debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
-		self.debug = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
+		self.debug_b = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
+		self.debug_m = optimizer.compute_gradients(total_loss_m, var_list=debug_var)
 
 		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
 		self.gradient_descent_n = optimizer.minimize(total_loss_n, global_step=self.global_step)
