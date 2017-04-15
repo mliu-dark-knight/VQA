@@ -43,9 +43,8 @@ FLAGS = flags.FLAGS
 
 def main(_):
 	try:
-		# word2vec = WordTable(FLAGS.glove_dim)
-		# FLAGS.vocab_size = word2vec.vocab_size
-		word2vec = None
+		word2vec = WordTable(FLAGS.glove_dim)
+		FLAGS.vocab_size = word2vec.vocab_size
 		dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train', q_max=1)
 		with tf.Session() as sess:
 			model = DMN(FLAGS, None)

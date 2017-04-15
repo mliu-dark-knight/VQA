@@ -88,7 +88,7 @@ class DataSet:
 		plt.axis('off')
 		plt.show()
 
-	def next_batch(self, visualize=False):
+	def next_batch(self):
 		return self.queue.get()
 
 	def next_batch_thread(self, imgDirTrain, featDirTrain, visualize=False):

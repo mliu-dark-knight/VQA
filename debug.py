@@ -48,6 +48,9 @@ class FakeDataSet(object):
     def index_to_word(self, index):
         return 'invalid'
 
+    def visualize(self, ann, I):
+        pass
+
     def next_batch(self):
         return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
                 np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(2, size=FLAGS.batch_size),
