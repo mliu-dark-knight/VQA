@@ -3,7 +3,6 @@ import threading
 from queue import Queue
 # from Queue import Queue
 from collections import defaultdict
-from multiprocessing import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
@@ -91,7 +90,7 @@ class DataSet:
 	def next_batch(self):
 		return self.queue.get()
 
-	def next_batch_thread(self, imgDirTrain, featDirTrain, visualize=False):
+	def next_batch_thread(self, imgDirTrain, featDirTrain):
 		while True:
 			Anns, Is, Xs, Qs, As = {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}, \
 								   {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}
@@ -120,11 +119,10 @@ class DataSet:
 				elif randomAnn['question_type'] == 'how many':
 					type = 'n'
 					A = int(self.id_to_answer(randomAnn['question_id']))
-					assert A < self.params.num_range
+					if A >= self.params.num_range:
+						continue
 				else:
 					type = 'm'
-				if visualize:
-					self.visualize(randomAnn, I)
 				Anns[type].append(randomAnn)
 				Is[type].append(I)
 				Xs[type].append(X)
