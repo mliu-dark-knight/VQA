@@ -1,6 +1,7 @@
 import pickle
 import threading
 from queue import Queue
+# from Queue import Queue
 from collections import defaultdict
 from multiprocessing import Queue
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ import numpy as np
 import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = '/home/victor/VQA'
+dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
 dataSubTypeTrain = 'val2014'
@@ -29,6 +30,7 @@ class DataSet:
 		assert params.dataset_size is None or params.batch_size <= params.dataset_size, 'batch size cannot be greater than data size.'
 		assert type == 'train' or type == 'val', 'bad data type'
 		assert num_threads > 0, 'lol no threads'
+		self.params = params
 		self.type = type
 		self.batch_size = params.batch_size
 		self.dataset_size = params.dataset_size
@@ -76,26 +78,6 @@ class DataSet:
 				ans_dict[answer['answer']] += 1
 		return max(ans_dict, key=lambda k: ans_dict[k])
 
-	# def id_to_question(self, id=None):
-	# 	question = self.vqa.qqa[id]['question'][:-1].split()
-	# 	Q_strip_apostrophe = []
-	# 	for word in question:
-	# 		if word is None:
-	# 			Q_strip_apostrophe.append(word)
-	# 		else:
-	# 			for a in re.split(r"['/\\?!,-.\"]", word):
-	# 				if a is not '':
-	# 					Q_strip_apostrophe.append(a)
-	#
-	# 	return [None] * (self.max_ques_size - len(Q_strip_apostrophe)) + list(
-	# 		map(lambda str: str.lower(), Q_strip_apostrophe))
-	#
-	# def id_to_answer(self, id=None):
-	# 	ans_dict = defaultdict(lambda: 0)
-	# 	for answer in self.vqa.loadQA(id)[0]['answers']:
-	# 		if len(re.split(r"['/\\?!,-.\"]", answer['answer'])) == 1:
-	# 			ans_dict[answer['answer']] += 1
-	# 	return re.split(r"['/\\?!,-.\"]", str(max(ans_dict, key=lambda k: ans_dict[k])))[0]
 
 	def index_to_word(self, index):
 		return self.word2vec.index_to_word(index)
@@ -111,7 +93,8 @@ class DataSet:
 
 	def next_batch_thread(self, imgDirTrain, featDirTrain, visualize=False):
 		while True:
-			Anns, Is, Xs, Qs, As = {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [], 'm': []}, {'b': [],'m': []}
+			Anns, Is, Xs, Qs, As = {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}, \
+								   {'b': [], 'n': [], 'm': []}, {'b': [], 'n': [], 'm': []}
 			for randomAnn in np.random.choice(self.anns, size=self.batch_size):
 				imgId = randomAnn['image_id']
 				if (self.type == 'train'):
@@ -130,11 +113,14 @@ class DataSet:
 					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.one_hot(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
-					#print('Warning! Exception: ' + str(e))
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
 					A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
+				elif randomAnn['question_type'] == 'how many':
+					type = 'n'
+					A = int(self.id_to_answer(randomAnn['question_id']))
+					assert A < self.params.num_range
 				else:
 					type = 'm'
 				if visualize:
@@ -146,6 +132,7 @@ class DataSet:
 				As[type].append(A)
 
 			self.queue.put((np.array(Anns['b']), np.array(Is['b']), np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
+							np.array(Anns['n']), np.array(Is['n']), np.array(Xs['n']), np.array(Qs['n']), np.array(As['n']),
 							np.array(Anns['m']), np.array(Is['m']), np.array(Xs['m']), np.array(Qs['m']), np.array(As['m'])))
 
 

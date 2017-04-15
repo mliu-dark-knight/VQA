@@ -11,17 +11,19 @@ flags.DEFINE_string('save_dir', 'model/', 'Save path')
 # training options
 flags.DEFINE_integer('batch_size', 1, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 1, 'Maximum data point')
-flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
+flags.DEFINE_integer('num_epochs', 1, 'Number of epochs for training')
+flags.DEFINE_integer('num_steps', 1, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 3, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
 flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
 
 # model params
+flags.DEFINE_integer('num_ques_type', 3, 'Number of types of question')
 flags.DEFINE_integer('memory_step', 1, 'Episodic Memory steps')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru')
 flags.DEFINE_integer('glove_dim', 5, 'GloVe size - Only used in dmn')
+flags.DEFINE_integer('num_range', 10, 'Range of numerical answer')
 flags.DEFINE_integer('vocab_size', 40, 'Vocabulary size')
 flags.DEFINE_integer('hidden_dim', 10, 'Size of hidden units')
 flags.DEFINE_integer('channel_dim', 16, 'Number of channels')
@@ -43,9 +45,14 @@ class FakeDataSet(object):
     def __init__(self):
         pass
 
+    def index_to_word(self, index):
+        return 'invalid'
+
     def next_batch(self):
         return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
                 np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(2, size=FLAGS.batch_size),
+                np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+                np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_range, size=FLAGS.batch_size),
                 np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
                 np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.vocab_size, size=FLAGS.batch_size)]
 
