@@ -6,7 +6,7 @@ flags = tf.app.flags
 
 # directories
 flags.DEFINE_boolean('test', False, 'true for testing, false for training')
-flags.DEFINE_string('save_dir', 'model/', 'Save path')
+flags.DEFINE_string('save_dir', 'model/log/', 'Save path')
 
 # training options
 flags.DEFINE_integer('batch_size', 1, 'Batch size during training and testing')
@@ -62,7 +62,7 @@ def main(_):
     dataset = FakeDataSet()
     with tf.Session() as sess:
         model = DMN(FLAGS, None)
-        summary_writer = tf.summary.FileWriter(FLAGS.save_dir + 'log', graph=sess.graph)
+        summary_writer = tf.summary.FileWriter(FLAGS.save_dir, graph=sess.graph)
         sess.run(tf.global_variables_initializer())
         model.train(sess, dataset, dataset, summary_writer)
 
