@@ -7,18 +7,18 @@ import numpy as np
 import skimage.io as io
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = '/home/victor/VQA'
+dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'train2014'
-AnnoSubTypeTrain = 'train2017'
+dataSubTypeTrain = 'val2014'
+AnnoSubTypeTrain = 'val2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 
 dataSubTypeVal = 'val2014'
-AnnoSubTypeVal = 'val2017'
+AnnoSubTypeVal = 'val2014'
 annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeVal)
 quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeVal)
 imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
@@ -45,6 +45,48 @@ class DataSet:
 		self.queue = Queue(maxsize=self.q_max)
 		self.counter = 0
 		self.num_threads = num_threads
+		self.colors = {
+			'white': 0,
+			'brown': 1,
+			'black': 2,
+			'blue': 3,
+			'red': 4,
+			'green': 5,
+			'pink': 6,
+			'beige': 7,
+			'clear': 8,
+			'yellow': 9,
+			'orange': 10,
+			'gray': 11,
+			'purple': 12,
+			'tan': 13,
+			'silver': 14,
+			'maroon': 15,
+			'gold': 16,
+			'blonde': 17,
+			'sepia': 18,
+			'plaid': 19,
+			0: 'white',
+			1: 'brown',
+			2: 'black',
+			3: 'blue',
+			4: 'red',
+			5: 'green',
+			6: 'pink',
+			7: 'beige',
+			8: 'clear',
+			9: 'yellow',
+			10: 'orange',
+			11: 'gray',
+			12: 'purple',
+			13: 'tan',
+			14: 'silver',
+			15: 'maroon',
+			16: 'gold',
+			17: 'blonde',
+			18: 'sepia',
+			19: 'plaid'
+		}
 		self.start()
 
 	def start(self):
@@ -61,22 +103,14 @@ class DataSet:
 			proc.join(timeout=0.1)
 
 	def load_QA(self):
-		# annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
-		annIds = self.vqa.getQuesIds()
-		# if self.dataset_size is not None:
-		# 	annIds = annIds[:self.dataset_size]
+		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
+		# annIds = self.vqa.getQuesIds()
+		if self.dataset_size is not None:
+			annIds = annIds[:self.dataset_size]
 		return self.vqa.loadQA(annIds)
 
-	# def id_to_question(self, id=None):
-	# 	question = self.vqa.qqa[id]['question'][:-1].split()
-	# 	return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
-	#
-	# def id_to_answer(self, id=None):
-	# 	ans_dict = defaultdict(lambda: 0)
-	# 	for answer in self.vqa.loadQA(id)[0]['answers']:
-	# 		if len(answer['answer'].split()) == 1:
-	# 			ans_dict[answer['answer']] += 1
-	# 	return max(ans_dict, key=lambda k: ans_dict[k])
+	def index_to_color(self, id):
+		return self.colors[id]
 
 	def id_to_question(self, id=None):
 		question = self.vqa.qqa[id]['question'][:-1].lower().split()
@@ -96,7 +130,6 @@ class DataSet:
 			map(lambda str: str.lower(), Q_strip_apostrophe))
 
 	def id_to_answer(self, id=None):
-		#ans_dict = defaultdict(lambda: 0)
 		answer = re.split(r"[' /\\?!,-.\"]", self.vqa.loadQA(id)[0]['multiple_choice_answer'])
 		if len(answer) == 1:
 			return answer[0]
@@ -137,8 +170,6 @@ class DataSet:
 					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
-					print("bad !" + str(e) + ", Orig Ques: " + str(self.vqa.qqa[randomAnn['question_id']]['question'][:-1].lower().split()) + ", Orig Answer: " + str(self.vqa.loadQA(randomAnn['question_id'])[0]['multiple_choice_answer']))
-					#print(self.vqa.loadQA(randomAnn['question_id'])[0]['multip'])
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
@@ -146,52 +177,23 @@ class DataSet:
 						A = 0
 					else:
 						A = 1
-					#A = np.zeros(2, dtype=np.float32)
-					#A[ans] = 1
 				elif randomAnn['answer_type'] == 'number':
 					type = 'n'
 					try:
 						A = int(self.id_to_answer(randomAnn['question_id']))
 						assert 0 <= A < self.params.num_range
-						#A = np.zeros(self.params.num_range, dtype=np.float32)
-						#A[ans] = 1
 					except:
 						print('bad number oo range!: ' + str(A))
 						continue
 				elif 'color' in randomAnn['question_type']:
 					type = 'c'
-					colors = {
-						'white': 0,
-						'brown': 1,
-						'black': 2,
-						'blue': 3,
-						'red': 4,
-						'green': 5,
-						'pink': 6,
-						'beige': 7,
-						'clear': 8,
-						'yellow': 9,
-						'orange': 10,
-						'gray': 11,
-						'purple': 12,
-						'tan': 13,
-						'silver': 14,
-						'maroon': 15,
-						'gold': 16,
-						'blonde': 17,
-						'sepia': 18,
-						'plaid': 19,
-					}
 					try:
-						A = colors[self.id_to_answer(randomAnn['question_id'])]
+						A = self.colors[self.id_to_answer(randomAnn['question_id'])]
 					except:
 						print('Unknown color: ' + str(self.id_to_answer(randomAnn['question_id'])))
 						continue
 				else:
 					type = 'm'
-					#ans = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
-					#A = np.zeros(self.params.vocab_size, dtype=np.float32)
-					#A[ans] = 1
 
 				Anns[type].append(randomAnn)
 				Is[type].append(I)
@@ -199,13 +201,6 @@ class DataSet:
 				Qs[type].append(Q)
 				As[type].append(A)
 
-				#print(type + ", Proc'd Ques: " + str(self.id_to_question(randomAnn['question_id'])) + ", Proc'd Answer: " + str(self.id_to_answer(randomAnn['question_id'])))
-
-
-
-			#print("m's: " + str(len(Qs['m'])) + ", n's: " + str(len(Qs['n'])) + ", b's: " + str(len(Qs['b'])))
-			#print(As['m'])
-			#print(Qs['m'])
 			self.queue.put((np.array(Anns['b']), Is['b'], np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
 							np.array(Anns['n']), Is['n'], np.array(Xs['n']), np.array(Qs['n']), np.array(As['n']),
 							np.array(Anns['m']), Is['m'], np.array(Xs['m']), np.array(Qs['m']), np.array(As['m']),
@@ -230,10 +225,6 @@ class WordTable:
 		if word == None:
 			return np.zeros(self.dim)
 		return self.word2vec[word]
-
-	# for sparse softmax cross entropy
-	# def one_hot(self, word):
-	# 	return self.word2idx[word]
 
 	def word_to_index(self, word):
 		return self.word2idx[word]

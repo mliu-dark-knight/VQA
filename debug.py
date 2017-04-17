@@ -19,10 +19,11 @@ flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
 flags.DEFINE_float('decay_rate', 0.1, 'Decay rate')
 
 # model params
-flags.DEFINE_integer('num_ques_type', 3, 'Number of types of question')
+flags.DEFINE_integer('num_ques_type', 4, 'Number of types of question')
 flags.DEFINE_integer('memory_step', 1, 'Episodic Memory steps')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru')
 flags.DEFINE_integer('glove_dim', 5, 'GloVe size - Only used in dmn')
+flags.DEFINE_integer('num_color', 20, 'Number of colors')
 flags.DEFINE_integer('num_range', 10, 'Range of numerical answer')
 flags.DEFINE_integer('vocab_size', 40, 'Vocabulary size')
 flags.DEFINE_integer('hidden_dim', 10, 'Size of hidden units')
@@ -42,32 +43,35 @@ flags.DEFINE_integer('rnn_layer', 1, 'Number of layers in question encoder')
 FLAGS = flags.FLAGS
 
 class FakeDataSet(object):
-    def __init__(self):
-        pass
+	def __init__(self):
+		pass
 
-    def index_to_word(self, index):
-        return 'invalid'
+	def index_to_color(self, index):
+		return 'invalid'
 
-    def visualize(self, ann, I):
-        pass
+	def index_to_word(self, index):
+		return 'invalid'
 
-    def next_batch(self):
-        return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-                np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(2, size=FLAGS.batch_size),
-                np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-                np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_range, size=FLAGS.batch_size),
-                np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-                np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.vocab_size, size=FLAGS.batch_size)]
+	def visualize(self, ann, I):
+		pass
 
-
+	def next_batch(self):
+		return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(2, size=FLAGS.batch_size),
+				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_range, size=FLAGS.batch_size),
+				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.vocab_size, size=FLAGS.batch_size),
+				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
+				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_color, size=FLAGS.batch_size)]
 
 def main(_):
-    dataset = FakeDataSet()
-    with tf.Session() as sess:
-        model = DMN(FLAGS, None)
-        summary_writer = tf.summary.FileWriter(FLAGS.save_dir, graph=sess.graph)
-        sess.run(tf.global_variables_initializer())
-        model.train(sess, dataset, dataset, summary_writer)
+	dataset = FakeDataSet()
+	with tf.Session() as sess:
+		model = DMN(FLAGS, None)
+		summary_writer = tf.summary.FileWriter(FLAGS.save_dir, graph=sess.graph)
+		sess.run(tf.global_variables_initializer())
+		model.train(sess, dataset, dataset, summary_writer)
 
 if __name__ == '__main__':
 	tf.app.run()

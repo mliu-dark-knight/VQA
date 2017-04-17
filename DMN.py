@@ -49,7 +49,6 @@ class Base(object):
 			(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, Is, Xs, Qs, As) = batch
 			type = np.repeat(3, len(As))
 			answer = self.answer_c
-		#assert len(type) == len(As) and len(Qs) == len(type)
 		return {self.input: Xs, self.question: Qs, self.type: type, answer: As}
 
 	def train_batch(self, sess, batch, sum_writer):
@@ -59,13 +58,10 @@ class Base(object):
 			('m', self.gradient_descent_m, self.merged_summary_op_m_loss),
 			('c', self.gradient_descent_c, self.merged_summary_op_c_loss)]:
 			feed_dict = self.get_feed_dict(batch, type, sess)
-	#      gradient = sess.run(getattr(self, 'debug_' + type), feed_dict=feed_dict)
-#            print(gradient)
 			if len(feed_dict[self.type]) > 0:
 				_, global_step, summary_all, specialized_summary = sess.run(
 					[gradient_descent, self.global_step, self.merged_summary_op, summary_op_for_that_type],
-					feed_dict=feed_dict) #  options=tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE),
-			#run_metadata=run_metadata)
+					feed_dict=feed_dict)
 				sum_writer.add_summary(summary_all, global_step=global_step)
 				sum_writer.add_summary(specialized_summary, global_step=global_step)
 
@@ -75,7 +71,6 @@ class Base(object):
 				[('b', self.predicts_b, self.accuracy_b), ('n', self.predicts_n, self.accuracy_n),
 				 ('m', self.predicts_m, self.accuracy_m), ('c', self.predicts_c, self.accuracy_c)]:
 			feed_dict = self.get_feed_dict(batch, type, sess)
-			#print(type + str(len(feed_dict[self.type])))
 			if len(feed_dict[self.type]) > 0:
 				ret_list += sess.run([self.predicts_t, predicts, accuracy], feed_dict=feed_dict)
 			else:
@@ -99,9 +94,8 @@ class Base(object):
 
 	def eval(self, sess, eval_data):
 		batch = eval_data.next_batch()
-		predicts_tb, predicts_b, accuracy_b, predicts_tn, predicts_n, accuracy_n, predicts_tm, predicts_m, accuracy_m, \
-		predicts_tc, predicts_c, accuracy_c = \
-			self.test_batch(sess, batch)
+		predicts_tb, predicts_b, accuracy_b, predicts_tn, predicts_n, accuracy_n, \
+		predicts_tm, predicts_m, accuracy_m, predicts_tc, predicts_c, accuracy_c = self.test_batch(sess, batch)
 		(Anns_b, Is_b, _, _, _, Anns_n, Is_n, _, _, _, Anns_m, Is_m, _, _, _, Anns_c, Is_c, _, _, _) = batch
 		for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
 			# eval_data.visualize(Ann, I)
@@ -111,36 +105,14 @@ class Base(object):
 			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %d' % (predict))
 		tqdm.write('Accuracy (how many): %f' % accuracy_n)
+		for predict, Ann, I in zip(predicts_c, Anns_c, Is_c):
+			# eval_data.visualize(Ann, I)
+			tqdm.write('Predicted answer: %s' % eval_data.index_to_color(predict))
+		tqdm.write('Accuracy (color): %f' % accuracy_c)
 		for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
 			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
 		tqdm.write('Accuracy (other): %f' % accuracy_m)
-		for predict, Ann, I in zip(predicts_c, Anns_c, Is_c):
-			# eval_data.visualize(Ann, I)
-			colors = {
-				0: 'white',
-				1: 'brown',
-				2: 'black',
-				3: 'blue',
-				4: 'red',
-				5: 'green',
-				6: 'pink',
-				7: 'beige',
-				8: 'clear',
-				9: 'yellow',
-				10: 'orange',
-				11: 'gray',
-				12: 'purple',
-				13: 'tan',
-				14: 'silver',
-				15: 'maroon',
-				16: 'gold',
-				17: 'blonde',
-				18: 'sepia',
-				19: 'plaid',
-			}
-			tqdm.write('Predicted answer: %s' % colors[predict])
-		tqdm.write('Accuracy (color): %f' % accuracy_c)
 
 
 	def save(self, sess):

@@ -112,8 +112,6 @@ class DMN(Base):
 		self.answer_m = tf.placeholder(tf.int32, shape=[None])
 		self.answer_c = tf.placeholder(tf.int32, shape=[None])
 
-
-		#with tf.device('/gpu:0'):
 		facts = self.build_input()
 		questions = self.build_question()
 		type = self.build_type(tf.unstack(questions, axis=1)[-1])
@@ -122,10 +120,7 @@ class DMN(Base):
 
 		logits_b = self.build_logits(memory, 2, 'AnswerBinary', 'b')
 		logits_n = self.build_logits(memory, self.params.num_range, 'AnswerNumber', 'n')
-		logits_c = self.build_logits(memory, 20, 'AnswerColor', 'c')
-
-
-		# with tf.device('/gpu:1'):
+		logits_c = self.build_logits(memory, self.params.num_color, 'AnswerColor', 'c')
 		logits_m = self.build_logits(memory, self.params.vocab_size, 'AnswerMulti', 'm')
 
 		with tf.name_scope('Loss'):
@@ -162,38 +157,26 @@ class DMN(Base):
 			self.accuracy_m = tf.reduce_mean(tf.cast(tf.equal(self.predicts_m, self.answer_m), tf.float32))
 			self.accuracy_c = tf.reduce_mean(tf.cast(tf.equal(self.predicts_c, self.answer_c), tf.float32))
 
-		# learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
-		# optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+		learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
+		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-		#debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
-		# self.debug_b = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
-		# self.debug_m = optimizer.compute_gradients(total_loss_m, var_list=debug_var)
+		self.gradient_descent_b = optimizer.minimize(total_loss_b,
+													 var_list=tf.get_collection('b') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
+													 global_step=self.global_step,
+													 colocate_gradients_with_ops=True)
+		self.gradient_descent_n = optimizer.minimize(total_loss_n,
+													 var_list=tf.get_collection('n') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
+													 global_step=self.global_step,
+													 colocate_gradients_with_ops=True)
+		self.gradient_descent_m = optimizer.minimize(total_loss_m,
+													 var_list=tf.get_collection('m') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
+													 global_step=self.global_step,
+													 colocate_gradients_with_ops=True)
 
-		self.gradient_descent_b = tf.train.AdamOptimizer(
-			learning_rate=self.params.learning_rate).minimize(total_loss_b,
-															  var_list=tf.get_collection('b') + tf.get_collection(
-																  tf.GraphKeys.TRAINABLE_VARIABLES),
-															  global_step=self.global_step,
-															  colocate_gradients_with_ops=True)
-		self.gradient_descent_n = tf.train.AdamOptimizer(
-			learning_rate=self.params.learning_rate).minimize(total_loss_n,
-															  var_list=tf.get_collection('n') + tf.get_collection(
-																  tf.GraphKeys.TRAINABLE_VARIABLES),
-															 # global_step=self.global_step,
-															  colocate_gradients_with_ops=True)
-		self.gradient_descent_m = tf.train.AdamOptimizer(
-			learning_rate=self.params.learning_rate).minimize(total_loss_m,
-															  var_list=tf.get_collection('m') + tf.get_collection(
-																  tf.GraphKeys.TRAINABLE_VARIABLES),
-															 # global_step=self.global_step,
-															  colocate_gradients_with_ops=True)
-
-		self.gradient_descent_c = tf.train.AdamOptimizer(
-			learning_rate=self.params.learning_rate).minimize(total_loss_c,
-															  var_list=tf.get_collection('c') + tf.get_collection(
-																  tf.GraphKeys.TRAINABLE_VARIABLES),
-															  # global_step=self.global_step,
-															  colocate_gradients_with_ops=True)
+		self.gradient_descent_c = optimizer.minimize(total_loss_c,
+													 var_list=tf.get_collection('c') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
+													 global_step=self.global_step,
+													 colocate_gradients_with_ops=True)
 
 		tf.summary.scalar('accuracy_t', self.accuracy_t)
 		tf.summary.scalar('accuracy_b', self.accuracy_b, collections=['b_stuff'])
@@ -206,7 +189,6 @@ class DMN(Base):
 		tf.summary.scalar('loss_n', loss_n, collections=['n_stuff'])
 		tf.summary.scalar('loss_m', loss_m, collections=['m_stuff'])
 		tf.summary.scalar('loss_c', loss_c, collections=['c_stuff'])
-		#tf.summary.image('image', )
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -246,10 +228,10 @@ class DMN(Base):
 				else:
 					with tf.variable_scope(scope, reuse=False):
 						memory = fully_connected(tf.concat([memory, c, question], 1), self.params.hidden_dim, 'MemoryUpdate',
-						                         suffix=str(t))
+												 suffix=str(t))
 
 				h_q = fully_connected(tf.concat([memory, question], 1), self.params.hidden_dim, 'QuestionCoattention',
-				                      activation='tanh')
+									  activation='tanh')
 				a_q = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h_q, axis=2), dim=0)
 				question = tf.transpose(tf.reduce_sum(tf.transpose(questions, perm=[2, 1, 0]) * a_q, axis=1))
 

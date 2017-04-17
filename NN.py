@@ -5,15 +5,13 @@ from functools import *
 
 def weight(name, shape, init='he', type=None):
 	assert init == 'he'
-	#std = math.sqrt(2.0 / reduce(lambda x, y: x + y, [0] + shape[:-1]))
-	#initializer = tf.random_normal_initializer(stddev=std)
-
-
+	std = math.sqrt(2.0 / reduce(lambda x, y: x + y, [0] + shape[:-1]))
+	initializer = tf.random_normal_initializer(stddev=std)
 	if type is not None:
-		var = tf.get_variable(name, shape, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'), trainable=False)
+		var = tf.get_variable(name, shape, initializer=initializer, trainable=False)
 		tf.add_to_collection(type, var)
 	else:
-		var = tf.get_variable(name, shape, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'))
+		var = tf.get_variable(name, shape, initializer=initializer)
 
 	tf.add_to_collection('l2', tf.nn.l2_loss(var))
 	return var
@@ -21,11 +19,11 @@ def weight(name, shape, init='he', type=None):
 
 def bias(name, dim, initial_value=1e-2, type=None):
 	if type is not None:
-		var = tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'), trainable=False)
+		var = tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_OUT'), trainable=False)
 		tf.add_to_collection(type, var)
 		return var
 	else:
-		return tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'))
+		return tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_OUT'))
 
 
 def batch_norm(x, prefix):
