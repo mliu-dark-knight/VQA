@@ -11,14 +11,16 @@ dataDir = '/home/victor/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
 dataSubTypeTrain = 'train2014'
-annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeTrain)
-quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeTrain)
+AnnoSubTypeTrain = 'train2017'
+annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeTrain)
+quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 
 dataSubTypeVal = 'val2014'
-annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, dataSubTypeVal)
-quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, dataSubTypeVal)
+AnnoSubTypeVal = 'val2017'
+annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeVal)
+quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeVal)
 imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 featDirVal = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
 
@@ -135,7 +137,7 @@ class DataSet:
 					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
-					#print("bad !" + str(e) + ", Orig Ques: " + str(self.vqa.qqa[randomAnn['question_id']]['question'][:-1].lower().split()) + ", Orig Answer: " + str(self.vqa.loadQA(randomAnn['question_id'])[0]['multiple_choice_answer']))
+					print("bad !" + str(e) + ", Orig Ques: " + str(self.vqa.qqa[randomAnn['question_id']]['question'][:-1].lower().split()) + ", Orig Answer: " + str(self.vqa.loadQA(randomAnn['question_id'])[0]['multiple_choice_answer']))
 					#print(self.vqa.loadQA(randomAnn['question_id'])[0]['multip'])
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
