@@ -3,18 +3,29 @@ import tensorflow as tf
 from functools import *
 
 
-def weight(name, shape, init='he'):
+def weight(name, shape, init='he', type=None):
 	assert init == 'he'
-	std = math.sqrt(2.0 / reduce(lambda x, y: x + y, [0] + shape[:-1]))
-	initializer = tf.random_normal_initializer(stddev=std)
+	#std = math.sqrt(2.0 / reduce(lambda x, y: x + y, [0] + shape[:-1]))
+	#initializer = tf.random_normal_initializer(stddev=std)
 
-	var = tf.get_variable(name, shape, initializer=initializer)
+
+	if type is not None:
+		var = tf.get_variable(name, shape, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'), trainable=False)
+		tf.add_to_collection(type, var)
+	else:
+		var = tf.get_variable(name, shape, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'))
+
 	tf.add_to_collection('l2', tf.nn.l2_loss(var))
 	return var
 
 
-def bias(name, dim, initial_value=1e-2):
-	return tf.get_variable(name, dim, initializer=tf.constant_initializer(initial_value))
+def bias(name, dim, initial_value=1e-2, type=None):
+	if type is not None:
+		var = tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'), trainable=False)
+		tf.add_to_collection(type, var)
+		return var
+	else:
+		return tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_AVG'))
 
 
 def batch_norm(x, prefix):
@@ -46,9 +57,9 @@ def conv1d(x, shape, stride, prefix, suffix='', activation='relu', bn=False):
 	return func[activation](l)
 
 
-def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=False):
+def fully_connected(input, num_neurons, prefix, suffix='', activation='relu', bn=False, type=None):
 	func = {'relu': tf.nn.relu, 'tanh': tf.nn.tanh, 'sigmoid': tf.nn.sigmoid, None: tf.identity}
-	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he')
+	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he', type=type)
 	if bn:
 		l = batch_norm(tf.matmul(input, W), prefix)
 	else:

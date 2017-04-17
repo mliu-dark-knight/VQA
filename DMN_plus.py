@@ -110,54 +110,103 @@ class DMN(Base):
 		self.answer_b = tf.placeholder(tf.int32, shape=[None])
 		self.answer_n = tf.placeholder(tf.int32, shape=[None])
 		self.answer_m = tf.placeholder(tf.int32, shape=[None])
+		self.answer_c = tf.placeholder(tf.int32, shape=[None])
 
+
+		#with tf.device('/gpu:0'):
 		facts = self.build_input()
 		questions = self.build_question()
 		type = self.build_type(tf.unstack(questions, axis=1)[-1])
+
 		memory = self.build_memory(questions, facts)
-		logits_b = self.build_logits(memory, 2, 'AnswerBinary')
-		logits_n = self.build_logits(memory, self.params.num_range, 'AnswerNumber')
-		logits_m = self.build_logits(memory, self.params.vocab_size, 'AnswerMulti')
+
+		logits_b = self.build_logits(memory, 2, 'AnswerBinary', 'b')
+		logits_n = self.build_logits(memory, self.params.num_range, 'AnswerNumber', 'n')
+		logits_c = self.build_logits(memory, 20, 'AnswerColor', 'c')
+
+
+		# with tf.device('/gpu:1'):
+		logits_m = self.build_logits(memory, self.params.vocab_size, 'AnswerMulti', 'm')
 
 		with tf.name_scope('Loss'):
+
 			loss_t = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.type, logits=type))
-			loss_b = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_b, logits=logits_b))
-			loss_n = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_n, logits=logits_n))
-			loss_m = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
-			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
-			total_loss_n = loss_n + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
-			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
+			loss_m = tf.reduce_mean(
+				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
+			loss_b = tf.reduce_mean(
+				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_b, logits=logits_b))
+			loss_n = tf.reduce_mean(
+				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_n, logits=logits_n))
+			loss_c = tf.reduce_mean(
+				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_c, logits=logits_c))
+
+
+			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
+				tf.get_collection('l2'))
+			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
+				tf.get_collection('l2'))
+			total_loss_n = loss_n + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
+				tf.get_collection('l2'))
+			total_loss_c = loss_c + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
+				tf.get_collection('l2'))
 
 		with tf.name_scope('Accuracy'):
 			self.predicts_t = tf.cast(tf.argmax(type, 1), 'int32')
 			self.predicts_b = tf.cast(tf.argmax(logits_b, 1), 'int32')
 			self.predicts_n = tf.cast(tf.argmax(logits_n, 1), 'int32')
 			self.predicts_m = tf.cast(tf.argmax(logits_m, 1), 'int32')
+			self.predicts_c = tf.cast(tf.argmax(logits_c, 1), 'int32')
 			self.accuracy_t = tf.reduce_mean(tf.cast(tf.equal(self.predicts_t, self.type), tf.float32))
 			self.accuracy_b = tf.reduce_mean(tf.cast(tf.equal(self.predicts_b, self.answer_b), tf.float32))
 			self.accuracy_n = tf.reduce_mean(tf.cast(tf.equal(self.predicts_n, self.answer_n), tf.float32))
 			self.accuracy_m = tf.reduce_mean(tf.cast(tf.equal(self.predicts_m, self.answer_m), tf.float32))
+			self.accuracy_c = tf.reduce_mean(tf.cast(tf.equal(self.predicts_c, self.answer_c), tf.float32))
 
-		learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
-		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+		# learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
+		# optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-		debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
-		self.debug_b = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
-		self.debug_m = optimizer.compute_gradients(total_loss_m, var_list=debug_var)
+		#debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
+		# self.debug_b = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
+		# self.debug_m = optimizer.compute_gradients(total_loss_m, var_list=debug_var)
 
-		self.gradient_descent_b = optimizer.minimize(total_loss_b, global_step=self.global_step)
-		self.gradient_descent_n = optimizer.minimize(total_loss_n, global_step=self.global_step)
-		self.gradient_descent_m = optimizer.minimize(total_loss_m, global_step=self.global_step)
+		self.gradient_descent_b = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_b,
+															  var_list=tf.get_collection('b') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															  global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+		self.gradient_descent_n = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_n,
+															  var_list=tf.get_collection('n') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															 # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+		self.gradient_descent_m = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_m,
+															  var_list=tf.get_collection('m') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															 # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+
+		self.gradient_descent_c = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_c,
+															  var_list=tf.get_collection('c') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															  # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
 
 		tf.summary.scalar('accuracy_t', self.accuracy_t)
 		tf.summary.scalar('accuracy_b', self.accuracy_b, collections=['b_stuff'])
 		tf.summary.scalar('accuracy_n', self.accuracy_n, collections=['n_stuff'])
 		tf.summary.scalar("accuracy_m", self.accuracy_m, collections=['m_stuff'])
+		tf.summary.scalar("accuracy_c", self.accuracy_c, collections=['c_stuff'])
 
 		tf.summary.scalar('loss_t', loss_t)
 		tf.summary.scalar('loss_b', loss_b, collections=['b_stuff'])
 		tf.summary.scalar('loss_n', loss_n, collections=['n_stuff'])
 		tf.summary.scalar('loss_m', loss_m, collections=['m_stuff'])
+		tf.summary.scalar('loss_c', loss_c, collections=['c_stuff'])
+		#tf.summary.image('image', )
 
 		for variable in tf.trainable_variables():
 			print(variable.name, variable.get_shape())
@@ -207,6 +256,6 @@ class DMN(Base):
 				scope.reuse_variables()
 		return memory
 
-	def build_logits(self, memory, vocab_size, prefix):
+	def build_logits(self, memory, vocab_size, prefix, type):
 		with tf.variable_scope('Answer'):
-			return fully_connected(memory, vocab_size, prefix, activation=None, bn=False)
+			return fully_connected(memory, vocab_size, prefix, activation=None, bn=False, type=type)
