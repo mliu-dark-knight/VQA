@@ -38,8 +38,10 @@ class EpisodeMemory:
 	def init_hidden(self, question):
 		return tf.zeros_like(question)
 
-	def update(self, memory, question, attention):
+	def update(self, memory, question, attention, images):
 		gs = self.attention(self.facts, memory, question)
+
+		tf.summary.image('visual attnmap', tf.concat([images, tf.image.resize_bicubic(tf.reshape(gs, [-1, 7, 7, 1]), [224, 224])], axis=3), max_outputs=16)
 		if attention == 'soft':
 			facts = tf.stack(self.facts, axis=1)
 			return tf.reduce_sum(facts * gs, axis=1)
@@ -60,6 +62,7 @@ class EpisodeMemory:
 				z = tf.concat([f * q, f * m, tf.abs(f - q), tf.abs(f - m)], 1)
 				Z.append(tf.matmul(tf.nn.tanh(tf.matmul(z, self.W1) + self.b1), self.W2) + self.b2)
 			g = tf.nn.softmax(tf.stack(Z, axis=1) / self.epsilon, dim=1)
+			#g = tf.Print(g, [g], summarize=100)
 		return g
 
 '''
@@ -104,6 +107,7 @@ class QuasiRNN(object):
 
 class DMN(Base):
 	def build(self):
+		self.images = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
 		self.word2vec = embedding('Word2vec', shape=[self.params.vocab_size, self.params.glove_dim])
 		self.input = tf.placeholder(tf.float32, shape=[None, self.params.img_size, self.params.channel_dim])
 		self.question = tf.placeholder(tf.int32, shape=[None, self.params.max_ques_size])
@@ -158,26 +162,38 @@ class DMN(Base):
 			self.accuracy_m = tf.reduce_mean(tf.cast(tf.equal(self.predicts_m, self.answer_m), tf.float32))
 			self.accuracy_c = tf.reduce_mean(tf.cast(tf.equal(self.predicts_c, self.answer_c), tf.float32))
 
-		learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
-		optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+		# learning_rate = tf.train.inverse_time_decay(self.params.learning_rate, self.global_step, 1, self.params.decay_rate)
+		# optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-		self.gradient_descent_b = optimizer.minimize(total_loss_b,
-													 var_list=tf.get_collection('b') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
-													 global_step=self.global_step,
-													 colocate_gradients_with_ops=True)
-		self.gradient_descent_n = optimizer.minimize(total_loss_n,
-													 var_list=tf.get_collection('n') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
-													 global_step=self.global_step,
-													 colocate_gradients_with_ops=True)
-		self.gradient_descent_m = optimizer.minimize(total_loss_m,
-													 var_list=tf.get_collection('m') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
-													 global_step=self.global_step,
-													 colocate_gradients_with_ops=True)
+		#debug_var = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='DMN/Question_Embedding')
+		# self.debug_b = optimizer.compute_gradients(total_loss_b, var_list=debug_var)
+		# self.debug_m = optimizer.compute_gradients(total_loss_m, var_list=debug_var)
 
-		self.gradient_descent_c = optimizer.minimize(total_loss_c,
-													 var_list=tf.get_collection('c') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES),
-													 global_step=self.global_step,
-													 colocate_gradients_with_ops=True)
+		self.gradient_descent_b = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_b,
+															  var_list=tf.get_collection('b') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															  global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+		self.gradient_descent_n = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_n,
+															  var_list=tf.get_collection('n') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															 # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+		self.gradient_descent_m = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_m,
+															  var_list=tf.get_collection('m') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															 # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
+
+		self.gradient_descent_c = tf.train.AdamOptimizer(
+			learning_rate=self.params.learning_rate).minimize(total_loss_c,
+															  var_list=tf.get_collection('c') + tf.get_collection(
+																  tf.GraphKeys.TRAINABLE_VARIABLES),
+															  # global_step=self.global_step,
+															  colocate_gradients_with_ops=True)
 
 		tf.summary.scalar('accuracy_t', self.accuracy_t)
 		tf.summary.scalar('accuracy_b', self.accuracy_b, collections=['b_stuff'])
@@ -223,7 +239,7 @@ class DMN(Base):
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):
-				c = episode.update(memory, question, self.params.attention)
+				c = episode.update(memory, question, self.params.attention, self.images)
 				if self.params.memory_update == 'gru':
 					memory = gru(c, memory)[0]
 				else:

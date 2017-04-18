@@ -18,7 +18,7 @@ def weight(name, shape, init='he', type=None):
 
 
 def embedding(name, shape):
-	return tf.get_variable(name, shape, initializer=tf.random_uniform_initializer(minval=-0.5 / shape[1], maxval=0.5 / shape[1]))
+	return tf.get_variable(name, shape, initializer=tf.random_uniform_initializer(minval=-1.0 / shape[1], maxval=1.0 / shape[1]))
 
 
 def bias(name, dim, initial_value=1e-2, type=None):

@@ -1,24 +1,23 @@
 import pickle
-import threading, re
+import threading
 from queue import Queue
-# from Queue import Queue
 import matplotlib.pyplot as plt
 import numpy as np
-import skimage.io as io
+import scipy.misc
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = 'VQA'
+dataDir = '/home/victor/VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'val2014'
-AnnoSubTypeTrain = 'val2014'
+dataSubTypeTrain = 'train2014'
+AnnoSubTypeTrain = 'train2017'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 
 dataSubTypeVal = 'val2014'
-AnnoSubTypeVal = 'val2014'
+AnnoSubTypeVal = 'val2017'
 annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeVal)
 quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeVal)
 imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
@@ -103,11 +102,10 @@ class DataSet:
 			proc.join(timeout=0.1)
 
 	def load_QA(self):
-		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196,
-											 208, 241, 257, 283, 285, 294, 328, 338, 357, 359])
-		# annIds = self.vqa.getQuesIds()
-		if self.dataset_size is not None:
-			annIds = annIds[:self.dataset_size]
+		# annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
+		annIds = self.vqa.getQuesIds()
+		# if self.dataset_size is not None:
+		# 	annIds = annIds[:self.dataset_size]
 		return self.vqa.loadQA(annIds)
 
 	def index_to_color(self, id):
@@ -151,13 +149,17 @@ class DataSet:
 
 				try:
 					if (self.type == 'train'):
-						I, X = io.imread(imgDirTrain + imgFilename), np.load(featDirTrain + featFilename)
+						I, X = scipy.misc.imread(imgDirTrain + imgFilename, mode='RGB'), np.load(featDirTrain + featFilename)
+						I = scipy.misc.imresize(I, (224, 224, 3), 'bicubic') / 255.0
 					elif (self.type == 'val'):
-						I, X = io.imread(imgDirVal + imgFilename), np.load(featDirVal + featFilename)
+						I, X = scipy.misc.imread(imgDirVal + imgFilename, mode='RGB'), np.load(featDirVal + featFilename)
+						I = scipy.misc.imresize(I, (224, 224, 3), 'bicubic') / 255.0
 
 					Q = np.array([self.word2vec.word_to_index(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
+					#print("bad !" + str(e) + ", Orig Ques: " + str(self.vqa.qqa[randomAnn['question_id']]['question'][:-1].lower().split()) + ", Orig Answer: " + str(self.vqa.loadQA(randomAnn['question_id'])[0]['multiple_choice_answer']))
+					#print(self.vqa.loadQA(randomAnn['question_id'])[0]['multip'])
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
@@ -187,6 +189,13 @@ class DataSet:
 				Qs[type].append(Q)
 				As[type].append(A)
 
+				#print(type + ", Proc'd Ques: " + str(self.id_to_question(randomAnn['question_id'])) + ", Proc'd Answer: " + str(self.id_to_answer(randomAnn['question_id'])))
+
+
+
+			#print("m's: " + str(len(Qs['m'])) + ", n's: " + str(len(Qs['n'])) + ", b's: " + str(len(Qs['b'])))
+			#print(As['m'])
+			#print(Qs['m'])
 			self.queue.put((np.array(Anns['b']), Is['b'], np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
 							np.array(Anns['n']), Is['n'], np.array(Xs['n']), np.array(Qs['n']), np.array(As['n']),
 							np.array(Anns['m']), Is['m'], np.array(Xs['m']), np.array(Qs['m']), np.array(As['m']),
@@ -211,7 +220,7 @@ class WordTable(object):
 					idx += 1
 		assert len(self.word2idx) == idx and len(self.idx2word) == idx
 		self.vocab_size = idx
-		pickle.dump(self, open('model/word2vec.cache', 'wb'))
+		pickle.dump(self, open('word2vec.cache', 'wb'))
 
 	def word_to_index(self, word):
 		if word not in self.word2idx:
@@ -224,7 +233,7 @@ class WordTable(object):
 	@staticmethod
 	def load_word2vec():
 		try:
-			word2vec = pickle.load(open('model/word2vec.cache', 'rb'))
+			word2vec = pickle.load(open('word2vec.cache', 'rb'))
 		except:
 			word2vec = WordTable()
 		return word2vec
