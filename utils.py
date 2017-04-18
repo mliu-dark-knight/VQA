@@ -121,7 +121,7 @@ class DataSet:
 		return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
 
 	def id_to_answer(self, id=None):
-		answer = self.vqa.loadQA(id)[0]['multiple_choice_answer']
+		answer = self.vqa.loadQA(id)[0]['multiple_choice_answer'].lower()
 		return answer
 
 	def index_to_word(self, index):
@@ -202,8 +202,8 @@ class WordTable(object):
 		self.idx2word = {0: 'null'}
 		idx = 1
 		for dataset in [VQA(annFileTrain, quesFileTrain), VQA(annFileVal, quesFileVal)]:
-			for id, qqa in dataset.qqa.iteritems():
-				for word in [dataset.loadQA(id)[0]['multiple_choice_answer']] + qqa['question'][:-1].lower().split():
+			for id, qqa in dataset.qqa.items():
+				for word in [dataset.loadQA(id)[0]['multiple_choice_answer'].lower()] + qqa['question'][:-1].lower().split():
 					if word in self.word2idx:
 						continue
 					self.word2idx[word] = idx
