@@ -103,7 +103,8 @@ class DataSet:
 			proc.join(timeout=0.1)
 
 	def load_QA(self):
-		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
+		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196,
+											 208, 241, 257, 283, 285, 294, 328, 338, 357, 359])
 		# annIds = self.vqa.getQuesIds()
 		if self.dataset_size is not None:
 			annIds = annIds[:self.dataset_size]
