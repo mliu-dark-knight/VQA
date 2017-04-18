@@ -1,7 +1,7 @@
 import pickle
 import threading, re
-# from queue import Queue
-from Queue import Queue
+from queue import Queue
+# from Queue import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
@@ -121,10 +121,7 @@ class DataSet:
 
 	def id_to_answer(self, id=None):
 		answer = self.vqa.loadQA(id)[0]['multiple_choice_answer']
-		if len(answer) == 1:
-			return answer[0]
-		else:
-			raise Exception('A too long')
+		return answer
 
 	def index_to_word(self, index):
 		return self.word2vec.index_to_word(index)
