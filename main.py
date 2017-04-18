@@ -13,7 +13,7 @@ flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/log/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
+flags.DEFINE_integer('batch_size', 1, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 100, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 1, 'Number of epochs for training')
 flags.DEFINE_integer('num_steps', 1, 'Number of steps per epoch')
@@ -47,12 +47,11 @@ flags.DEFINE_integer('rnn_layer', 2, 'Number of layers in question encoder')
 FLAGS = flags.FLAGS
 
 def main(_):
-	os.makedirs(FLAGS.save_dir, exist_ok=True)
-	word2vec = WordTable(FLAGS.glove_dim)
+	word2vec = WordTable.load_word2vec()
 	FLAGS.vocab_size = word2vec.vocab_size
 	dataset = DataSet(word2vec=word2vec, params=FLAGS, type='train', q_max=1, num_threads=1)
 	with tf.Session() as sess:
-		model = DMN(FLAGS, None)
+		model = DMN(FLAGS)
 		summary_writer = tf.summary.FileWriter(FLAGS.save_dir, graph=sess.graph)
 		sess.run([tf.local_variables_initializer(), tf.global_variables_initializer()])
 		model.train(sess, dataset, dataset, summary_writer)

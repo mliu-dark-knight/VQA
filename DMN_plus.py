@@ -104,8 +104,9 @@ class QuasiRNN(object):
 
 class DMN(Base):
 	def build(self):
+		self.word2vec = embedding('Word2vec', shape=[self.params.vocab_size, self.params.glove_dim])
 		self.input = tf.placeholder(tf.float32, shape=[None, self.params.img_size, self.params.channel_dim])
-		self.question = tf.placeholder(tf.float32, shape=[None, self.params.max_ques_size, self.params.glove_dim])
+		self.question = tf.placeholder(tf.int32, shape=[None, self.params.max_ques_size])
 		self.type = tf.placeholder(tf.int32, shape=[None])
 		self.answer_b = tf.placeholder(tf.int32, shape=[None])
 		self.answer_n = tf.placeholder(tf.int32, shape=[None])
@@ -113,7 +114,7 @@ class DMN(Base):
 		self.answer_c = tf.placeholder(tf.int32, shape=[None])
 
 		facts = self.build_input()
-		questions = self.build_question()
+		questions = self.build_question(tf.nn.embedding_lookup(self.word2vec, self.question))
 		type = self.build_type(tf.unstack(questions, axis=1)[-1])
 
 		memory = self.build_memory(questions, facts)
@@ -198,17 +199,17 @@ class DMN(Base):
 		facts = fully_connected(input, self.params.hidden_dim, 'ImageEmbedding', activation=None)
 		return tf.reshape(facts, [-1, self.params.img_size, self.params.hidden_dim])
 
-	def build_question(self):
+	def build_question(self, question):
 		with tf.variable_scope('Question_Embedding'):
 			if self.params.quasi_rnn:
-				rnn_inputs = self.question
+				rnn_inputs = question
 				for _ in range(self.params.rnn_layer):
 					rnn = QuasiRNN(self.params.hidden_dim, self.params.kernel_width)
 					rnn_inputs, _ = rnn(rnn_inputs, self.params.pooling)
 				question_vecs = rnn_inputs
 			else:
 				gru = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.GRUCell(self.params.hidden_dim)] * self.params.rnn_layer)
-				question_vecs, _ = tf.nn.dynamic_rnn(gru, self.question, dtype=tf.float32)
+				question_vecs, _ = tf.nn.dynamic_rnn(gru, question, dtype=tf.float32)
 		return question_vecs
 
 	def build_type(self, question):

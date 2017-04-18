@@ -8,9 +8,8 @@ from tqdm import tqdm
 
 
 class Base(object):
-	def __init__(self, params, words):
+	def __init__(self, params):
 		self.params = params
-		self.words = words
 		self.save_dir = params.save_dir
 		self.starttime_init = time.time()
 

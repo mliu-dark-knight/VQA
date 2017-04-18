@@ -23,9 +23,9 @@ flags.DEFINE_integer('num_ques_type', 4, 'Number of types of question')
 flags.DEFINE_integer('memory_step', 1, 'Episodic Memory steps')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru')
 flags.DEFINE_integer('glove_dim', 5, 'GloVe size - Only used in dmn')
+flags.DEFINE_integer('vocab_size', 40, 'Vocabulary size')
 flags.DEFINE_integer('num_color', 20, 'Number of colors')
 flags.DEFINE_integer('num_range', 10, 'Range of numerical answer')
-flags.DEFINE_integer('vocab_size', 40, 'Vocabulary size')
 flags.DEFINE_integer('hidden_dim', 10, 'Size of hidden units')
 flags.DEFINE_integer('channel_dim', 16, 'Number of channels')
 flags.DEFINE_integer('img_size', 3 * 3, 'Image feature size')
@@ -57,18 +57,18 @@ class FakeDataSet(object):
 
 	def next_batch(self):
 		return [np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(2, size=FLAGS.batch_size),
+				np.random.randint(FLAGS.vocab_size, size=(FLAGS.batch_size, FLAGS.max_ques_size)), np.random.randint(2, size=FLAGS.batch_size),
 				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_range, size=FLAGS.batch_size),
+				np.random.randint(FLAGS.vocab_size, size=(FLAGS.batch_size, FLAGS.max_ques_size)), np.random.randint(FLAGS.num_range, size=FLAGS.batch_size),
 				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.vocab_size, size=FLAGS.batch_size),
+				np.random.randint(FLAGS.vocab_size, size=(FLAGS.batch_size, FLAGS.max_ques_size)), np.random.randint(FLAGS.vocab_size, size=FLAGS.batch_size),
 				np.array([None]), np.array([None]), np.random.rand(FLAGS.batch_size, FLAGS.img_size, FLAGS.channel_dim),
-				np.random.rand(FLAGS.batch_size, FLAGS.max_ques_size, FLAGS.glove_dim), np.random.randint(FLAGS.num_color, size=FLAGS.batch_size)]
+				np.random.randint(FLAGS.vocab_size, size=(FLAGS.batch_size, FLAGS.max_ques_size)), np.random.randint(FLAGS.num_color, size=FLAGS.batch_size)]
 
 def main(_):
 	dataset = FakeDataSet()
 	with tf.Session() as sess:
-		model = DMN(FLAGS, None)
+		model = DMN(FLAGS)
 		summary_writer = tf.summary.FileWriter(FLAGS.save_dir, graph=sess.graph)
 		sess.run(tf.global_variables_initializer())
 		model.train(sess, dataset, dataset, summary_writer)

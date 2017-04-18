@@ -1,7 +1,7 @@
 import pickle
 import threading, re
-from queue import Queue
-import tensorflow as tf
+# from queue import Queue
+from Queue import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
@@ -114,23 +114,13 @@ class DataSet:
 
 	def id_to_question(self, id=None):
 		question = self.vqa.qqa[id]['question'][:-1].lower().split()
-		Q_strip_apostrophe = []
-		for word in question:
-			if word is None:
-				Q_strip_apostrophe.append(word)
-			else:
-				for a in re.split(r"['/\\?!,-.\"]", word):
-					if a is not '':
-						Q_strip_apostrophe.append(a)
-
-		if(self.max_ques_size < len(Q_strip_apostrophe)):
+		if(self.max_ques_size < len(question)):
 			raise Exception('Q too long')
 
-		return [None] * (self.max_ques_size - len(Q_strip_apostrophe)) + list(
-			map(lambda str: str.lower(), Q_strip_apostrophe))
+		return [None] * (self.max_ques_size - len(question)) + list(map(lambda str: str.lower(), question))
 
 	def id_to_answer(self, id=None):
-		answer = re.split(r"[' /\\?!,-.\"]", self.vqa.loadQA(id)[0]['multiple_choice_answer'])
+		answer = self.vqa.loadQA(id)[0]['multiple_choice_answer']
 		if len(answer) == 1:
 			return answer[0]
 		else:
@@ -167,30 +157,28 @@ class DataSet:
 					elif (self.type == 'val'):
 						I, X = io.imread(imgDirVal + imgFilename), np.load(featDirVal + featFilename)
 
-					Q = np.stack([self.word2vec.word_vector(word) for word in self.id_to_question(randomAnn['question_id'])])
+					Q = np.array([self.word2vec.word_to_index(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
-					if self.id_to_answer(randomAnn['question_id']) == 'no':
-						A = 0
-					else:
-						A = 1
+					A = 0 if self.id_to_answer(randomAnn['question_id']) == 'no' else 1
 				elif randomAnn['answer_type'] == 'number':
 					type = 'n'
 					try:
 						A = int(self.id_to_answer(randomAnn['question_id']))
 						assert 0 <= A < self.params.num_range
 					except:
-						print('bad number oo range!: ' + str(A))
+						print('Number out of range!: ' + str(A))
 						continue
 				elif 'color' in randomAnn['question_type']:
 					type = 'c'
+					color = self.id_to_answer(randomAnn['question_id'])
 					try:
-						A = self.colors[self.id_to_answer(randomAnn['question_id'])]
+						A = self.colors[color]
 					except:
-						print('Unknown color: ' + str(self.id_to_answer(randomAnn['question_id'])))
+						print('Unknown color: ' + color)
 						continue
 				else:
 					type = 'm'
@@ -207,47 +195,38 @@ class DataSet:
 							np.array(Anns['c']), Is['c'], np.array(Xs['c']), np.array(Qs['c']), np.array(As['c'])))
 
 
-class WordTable:
-	def __init__(self, dim):
-		self.word2vec = self.load_glove(dim)
-		self.dim = dim
-		self.vocab_size = len(self.word2vec)
+class WordTable(object):
+	def __init__(self):
 		self.index_word()
 
 	def index_word(self):
-		self.word2idx = {}
-		self.idx2word = {}
-		for idx, word in enumerate(self.word2vec):
-			self.word2idx[word] = idx
-			self.idx2word[idx] = word
-
-	def word_vector(self, word):
-		if word == None:
-			return np.zeros(self.dim)
-		return self.word2vec[word]
+		self.word2idx = {'null': 0}
+		self.idx2word = {0: 'null'}
+		idx = 1
+		for dataset in [VQA(annFileTrain, quesFileTrain), VQA(annFileVal, quesFileVal)]:
+			for id, qqa in dataset.qqa.iteritems():
+				for word in [dataset.loadQA(id)[0]['multiple_choice_answer']] + qqa['question'][:-1].lower().split():
+					if word in self.word2idx:
+						continue
+					self.word2idx[word] = idx
+					self.idx2word[idx] = word
+					idx += 1
+		assert len(self.word2idx) == idx and len(self.idx2word) == idx
+		self.vocab_size = idx
+		pickle.dump(self, open('model/word2vec.cache', 'wb'))
 
 	def word_to_index(self, word):
+		if word not in self.word2idx:
+			return 0
 		return self.word2idx[word]
 
 	def index_to_word(self, index):
 		return self.idx2word[index]
 
-	def load_glove(self, dim):
-		word2vec = {}
-
-		path = 'VQA/PythonHelperTools/glove.6B/glove.6B.' + str(dim) + 'd'
+	@staticmethod
+	def load_word2vec():
 		try:
-			with open(path + '.cache', 'rb') as cache_file:
-				word2vec = pickle.load(cache_file)
-
+			word2vec = pickle.load(open('model/word2vec.cache', 'rb'))
 		except:
-			with open(path + '.txt') as f:
-				for line in f:
-					l = line.rstrip().split()
-					word2vec[l[0]] = [float(x) for x in l[1:]]
-
-			with open(path + '.cache', 'wb') as cache_file:
-				pickle.dump(word2vec, cache_file)
-
-		print("Glove data loaded")
+			word2vec = WordTable()
 		return word2vec
