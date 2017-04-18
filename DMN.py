@@ -84,10 +84,10 @@ class Base(object):
 				self.train_batch(sess, batch, sum_writer)
 
 			self.eval(sess, val_data)
-			if epoch % self.params.save_period == 0:
-				self.save(sess)
-				print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
-					  str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
+			# if epoch % self.params.save_period == 0:
+			# 	self.save(sess)
+			# 	print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
+			# 		  str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
 
 		print('Training complete.')
 
@@ -103,7 +103,7 @@ class Base(object):
 		for predict, Ann, I in zip(predicts_b, Anns_n, Is_n):
 			eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %d' % (predict))
-		tqdm.write('Accuracy (how many): %f' % accuracy_n)
+		tqdm.write('Accuracy (number): %f' % accuracy_n)
 		for predict, Ann, I in zip(predicts_c, Anns_c, Is_c):
 			eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_color(predict))

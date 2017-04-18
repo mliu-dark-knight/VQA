@@ -1,7 +1,3 @@
-import datetime
-import shlex
-import subprocess, os
-
 import tensorflow as tf
 from DMN_plus import DMN
 from utils import *
@@ -15,8 +11,8 @@ flags.DEFINE_string('save_dir', 'model/log/', 'Save path [save/]')
 # training options
 flags.DEFINE_integer('batch_size', 10, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 200, 'Maximum data point')
-flags.DEFINE_integer('num_epochs', 1, 'Number of epochs for training')
-flags.DEFINE_integer('num_steps', 1, 'Number of steps per epoch')
+flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
+flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
 flags.DEFINE_boolean('load', False, 'Start training from saved model')
 flags.DEFINE_integer('save_period', 10, 'Save period [80]')
 flags.DEFINE_float('learning_rate', 0.01, 'Learning rate')
@@ -27,7 +23,7 @@ flags.DEFINE_integer('num_ques_type', 4, 'Number of types of question')
 flags.DEFINE_integer('memory_step', 3, 'Episodic Memory steps')
 flags.DEFINE_string('memory_update', 'relu', 'Episodic meory update method - relu or gru')
 flags.DEFINE_integer('glove_dim', 200, 'GloVe size - Only used in dmn')
-flags.DEFINE_integer('vocab_size', 400000, 'Vocabulary size')
+flags.DEFINE_integer('vocab_size', 20000, 'Vocabulary size')
 flags.DEFINE_integer('num_color', 20, 'Number of colors')
 flags.DEFINE_integer('num_range', 20, 'Range of numerical answer')
 flags.DEFINE_integer('hidden_dim', 100, 'Size of hidden units')
