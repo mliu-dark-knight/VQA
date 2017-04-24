@@ -65,9 +65,9 @@ def conv1d(x, shape, stride, prefix, suffix='', activation='relu', bn=False):
 		l = tf.nn.conv1d(x, W, stride, padding='SAME') + b
 	return func[activation](l)
 
+
 def lrelu(x, alpha=0.1):
 	return tf.maximum(x * alpha, x)
-
 
 
 def fully_connected(input, num_neurons, prefix, suffix='', activation='lrelu', bn=False, training=True, type=None):
