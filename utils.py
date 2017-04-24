@@ -212,7 +212,7 @@ class WordTable(object):
 					idx += 1
 		assert len(self.word2idx) == idx and len(self.idx2word) == idx
 		self.vocab_size = idx
-		pickle.dump(self, open('word2vec.cache', 'wb'))
+		pickle.dump(self, open('model/word2vec.cache', 'wb'))
 
 	def word_to_index(self, word):
 		if word not in self.word2idx:
@@ -225,7 +225,7 @@ class WordTable(object):
 	@staticmethod
 	def load_word2vec():
 		try:
-			word2vec = pickle.load(open('word2vec.cache', 'rb'))
+			word2vec = pickle.load(open('model/word2vec.cache', 'rb'))
 		except:
 			word2vec = WordTable()
 		return word2vec

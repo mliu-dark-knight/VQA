@@ -229,8 +229,7 @@ class DMN(Base):
 					memory = gru(c, memory)[0]
 				else:
 					with tf.variable_scope(scope, reuse=False):
-						memory = fully_connected(tf.concat([memory, c, question], axis=1), self.params.hidden_dim, 'MemoryUpdate',
-												 suffix=str(t), bn=True, training=self.training)
+						memory = fully_connected(tf.concat([memory, c, question], axis=1), self.params.hidden_dim, 'MemoryUpdate', suffix=str(t))
 
 				h_q = fully_connected(tf.concat([memory, question], axis=1), self.params.hidden_dim, 'QuestionCoattention', activation='tanh')
 				a_q = tf.nn.softmax(tf.reduce_sum(tf.transpose(questions, perm=[1, 0, 2]) * h_q, axis=2), dim=0)

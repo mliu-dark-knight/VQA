@@ -21,7 +21,7 @@ def embedding(name, shape):
 	return tf.get_variable(name, shape, initializer=tf.random_uniform_initializer(minval=-1.0 / shape[1], maxval=1.0 / shape[1]))
 
 
-def bias(name, dim, initial_value=1e-2, type=None):
+def bias(name, dim, type=None):
 	if type is not None:
 		var = tf.get_variable(name, dim, initializer=tf.contrib.layers.variance_scaling_initializer(mode='FAN_OUT'), trainable=False)
 		tf.add_to_collection(type, var)
