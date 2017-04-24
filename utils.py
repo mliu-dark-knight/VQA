@@ -9,8 +9,8 @@ from VQA.PythonHelperTools.vqaTools.vqa import VQA
 dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'train2014'
-AnnoSubTypeTrain = 'train2014'
+dataSubTypeTrain = 'val2014'
+AnnoSubTypeTrain = 'val2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
