@@ -43,7 +43,7 @@ def batch_norm(x, prefix, training):
 
 		def update_mean_var():
 			ema.apply([batch_mean, batch_var])
-			return batch_mean, batch_var
+			return ema.average(batch_mean), ema.average(batch_var)
 
 		mean, var = tf.cond(training, update_mean_var, lambda : (ema.average(batch_mean), ema.average(batch_var)))
 		normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
