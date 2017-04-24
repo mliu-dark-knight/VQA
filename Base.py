@@ -100,7 +100,7 @@ class Base(object):
 			eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
 		tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
-		for predict, Ann, I in zip(predicts_b, Anns_n, Is_n):
+		for predict, Ann, I in zip(predicts_n, Anns_n, Is_n):
 			eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %d' % (predict))
 		tqdm.write('Accuracy (number): %f' % accuracy_n)
