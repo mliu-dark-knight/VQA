@@ -8,7 +8,7 @@ flags = tf.app.flags
 flags.DEFINE_string('save_dir', 'model/log/', 'Save path [save/]')
 
 # training options
-flags.DEFINE_integer('batch_size', 1, 'Batch size during training and testing')
+flags.DEFINE_integer('batch_size', 2, 'Batch size during training and testing')
 flags.DEFINE_integer('dataset_size', 200, 'Maximum data point')
 flags.DEFINE_integer('num_epochs', 10, 'Number of epochs for training')
 flags.DEFINE_integer('num_steps', 10, 'Number of steps per epoch')
