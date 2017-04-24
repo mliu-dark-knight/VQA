@@ -1,11 +1,10 @@
 import numpy as np
 import tensorflow as tf
-from DMN_plus import DMN
+from DMN import DMN
 
 flags = tf.app.flags
 
 # directories
-flags.DEFINE_boolean('test', False, 'true for testing, false for training')
 flags.DEFINE_string('save_dir', 'model/log/', 'Save path')
 
 # training options
