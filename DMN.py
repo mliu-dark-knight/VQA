@@ -128,24 +128,16 @@ class DMN(Base):
 		with tf.name_scope('Loss'):
 
 			loss_t = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.type, logits=type))
-			loss_m = tf.reduce_mean(
-				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
-			loss_b = tf.reduce_mean(
-				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_b, logits=logits_b))
-			loss_n = tf.reduce_mean(
-				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_n, logits=logits_n))
-			loss_c = tf.reduce_mean(
-				tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_c, logits=logits_c))
+			loss_m = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_m, logits=logits_m))
+			loss_b = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_b, logits=logits_b))
+			loss_n = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_n, logits=logits_n))
+			loss_c = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.answer_c, logits=logits_c))
 
 
-			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
-				tf.get_collection('l2'))
-			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
-				tf.get_collection('l2'))
-			total_loss_n = loss_n + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
-				tf.get_collection('l2'))
-			total_loss_c = loss_c + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(
-				tf.get_collection('l2'))
+			total_loss_m = loss_m + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
+			total_loss_b = loss_b + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
+			total_loss_n = loss_n + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
+			total_loss_c = loss_c + self.params.lambda_t * loss_t + self.params.lambda_r * tf.add_n(tf.get_collection('l2'))
 
 		with tf.name_scope('Accuracy'):
 			self.predicts_t = tf.cast(tf.argmax(type, 1), 'int32')
