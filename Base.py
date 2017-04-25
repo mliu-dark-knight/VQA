@@ -48,7 +48,7 @@ class Base(object):
 			(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, Is, Xs, Qs, As) = batch
 			type = np.repeat(3, len(As))
 			answer = self.answer_c
-		return {self.training: training, self.input: Xs, self.question: Qs, self.type: type, answer: As}
+		return {self.training: training, self.input: Xs, self.question: Qs, self.type: type, answer: As, self.images: Is}
 
 	def train_batch(self, sess, batch, sum_writer):
 		for (type, gradient_descent, summary_op_for_that_type) in [
@@ -84,10 +84,10 @@ class Base(object):
 				self.train_batch(sess, batch, sum_writer)
 
 			self.eval(sess, val_data)
-			# if epoch % self.params.save_period == 0:
-			# 	self.save(sess)
-			# 	print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
-			# 		  str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
+			if epoch % self.params.save_period == 0:
+				self.save(sess)
+				print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
+					  str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
 
 		print('Training complete.')
 
@@ -97,19 +97,19 @@ class Base(object):
 		predicts_tm, predicts_m, accuracy_m, predicts_tc, predicts_c, accuracy_c = self.test_batch(sess, batch)
 		(Anns_b, Is_b, _, _, _, Anns_n, Is_n, _, _, _, Anns_m, Is_m, _, _, _, Anns_c, Is_c, _, _, _) = batch
 		for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
-			eval_data.visualize(Ann, I)
+			#eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
 		tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
-		for predict, Ann, I in zip(predicts_n, Anns_n, Is_n):
-			eval_data.visualize(Ann, I)
+		for predict, Ann, I in zip(predicts_b, Anns_n, Is_n):
+			#eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %d' % (predict))
 		tqdm.write('Accuracy (number): %f' % accuracy_n)
 		for predict, Ann, I in zip(predicts_c, Anns_c, Is_c):
-			eval_data.visualize(Ann, I)
+			#eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_color(predict))
 		tqdm.write('Accuracy (color): %f' % accuracy_c)
 		for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
-			eval_data.visualize(Ann, I)
+			#eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
 		tqdm.write('Accuracy (other): %f' % accuracy_m)
 

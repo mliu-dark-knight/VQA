@@ -38,8 +38,11 @@ class EpisodeMemory:
 	def init_hidden(self, question):
 		return tf.zeros_like(question)
 
-	def update(self, memory, question, attention):
+	def update(self, memory, question, attention, images):
 		gs = self.attention(self.facts, memory, question)
+		tf.summary.image('visual attnmap',
+						 tf.concat([images, tf.image.resize_bicubic(tf.reshape(gs, [-1, 7, 7, 1]), [224, 224])],
+								   axis=3), max_outputs=16)
 		if attention == 'soft':
 			facts = tf.stack(self.facts, axis=1)
 			return tf.reduce_sum(facts * gs, axis=1)
@@ -104,6 +107,7 @@ class QuasiRNN(object):
 
 class DMN(Base):
 	def build(self):
+		self.images = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
 		self.training = tf.placeholder(tf.bool)
 		self.word2vec = embedding('Word2vec', shape=[self.params.vocab_size, self.params.glove_dim])
 		self.input = tf.placeholder(tf.float32, shape=[None, self.params.img_size, self.params.channel_dim])
@@ -216,7 +220,7 @@ class DMN(Base):
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):
-				c = episode.update(memory, question, self.params.attention)
+				c = episode.update(memory, question, self.params.attention, self.images)
 				if self.params.memory_update == 'gru':
 					memory = gru(c, memory)[0]
 				else:
