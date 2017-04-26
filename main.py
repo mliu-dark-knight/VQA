@@ -37,7 +37,7 @@ flags.DEFINE_boolean('quasi_rnn', True, 'Use quasi rnn')
 flags.DEFINE_integer('kernel_width', 2, 'Kernel width')
 flags.DEFINE_string('pooling', '_ifo', 'Pooling method for quasi rnn, _f, _fo or _ifo')
 flags.DEFINE_integer('rnn_layer', 2, 'Number of layers in question encoder')
-flags.DEFINE_integer('img_embed_layer', 2, 'Number of layers in image embedding')
+flags.DEFINE_integer('img_embed_layer', 1, 'Number of layers in image embedding')
 
 
 FLAGS = flags.FLAGS
