@@ -48,7 +48,7 @@ class Base(object):
 			(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, Is, Xs, Qs, As) = batch
 			type = np.repeat(3, len(As))
 			answer = self.answer_c
-		return {self.training: training, self.input: Xs, self.question: Qs, self.type: type, answer: As, self.images: Is}
+		return {self.training: training, self.input: Xs, self.question: Qs, self.type: type, answer: As}
 
 	def train_batch(self, sess, batch, sum_writer):
 		for (type, gradient_descent, summary_op_for_that_type) in [

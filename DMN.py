@@ -38,11 +38,8 @@ class EpisodeMemory:
 	def init_hidden(self, question):
 		return tf.zeros_like(question)
 
-	def update(self, memory, question, attention, images):
+	def update(self, memory, question, attention):
 		gs = self.attention(self.facts, memory, question)
-		tf.summary.image('visual attnmap',
-						 tf.concat([images, tf.image.resize_bicubic(tf.reshape(gs, [-1, 7, 7, 1]), [224, 224])],
-								   axis=3), max_outputs=16)
 		if attention == 'soft':
 			facts = tf.stack(self.facts, axis=1)
 			return tf.reduce_sum(facts * gs, axis=1)
@@ -107,7 +104,6 @@ class QuasiRNN(object):
 
 class DMN(Base):
 	def build(self):
-		self.images = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
 		self.training = tf.placeholder(tf.bool)
 		self.word2vec = embedding('Word2vec', shape=[self.params.vocab_size, self.params.glove_dim])
 		self.input = tf.placeholder(tf.float32, shape=[None, self.params.img_size, self.params.channel_dim])
@@ -193,7 +189,9 @@ class DMN(Base):
 
 	def build_input(self):
 		input = tf.reshape(self.input, [-1, self.params.channel_dim])
-		facts = fully_connected(input, self.params.hidden_dim, 'ImageEmbedding', activation='tanh', bn=True, training=self.training)
+		for l in range(self.params.img_embed_layer):
+			facts = fully_connected(input, self.params.hidden_dim, 'ImageEmbedding' + str(l), activation='tanh', bn=True, training=self.training)
+			input = tf.concat([facts, input], axis=-1)
 		return tf.reshape(facts, [-1, self.params.img_size, self.params.hidden_dim])
 
 	def build_question(self, question):
@@ -202,8 +200,9 @@ class DMN(Base):
 				rnn_inputs = question
 				for _ in range(self.params.rnn_layer):
 					rnn = QuasiRNN(self.params.hidden_dim, self.params.kernel_width)
-					rnn_inputs, _ = rnn(rnn_inputs, self.params.pooling)
-				question_vecs = rnn_inputs
+					rnn_outputs, _ = rnn(rnn_inputs, self.params.pooling)
+					rnn_inputs = tf.concat([rnn_outputs, rnn_inputs], axis=-1)
+				question_vecs = rnn_outputs
 			else:
 				gru = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.GRUCell(self.params.hidden_dim)] * self.params.rnn_layer)
 				question_vecs, _ = tf.nn.dynamic_rnn(gru, question, dtype=tf.float32)
@@ -220,7 +219,7 @@ class DMN(Base):
 			memory = tf.identity(question)
 			gru = tf.contrib.rnn.GRUCell(self.params.hidden_dim)
 			for t in range(self.params.memory_step):
-				c = episode.update(memory, question, self.params.attention, self.images)
+				c = episode.update(memory, question, self.params.attention)
 				if self.params.memory_update == 'gru':
 					memory = gru(c, memory)[0]
 				else:

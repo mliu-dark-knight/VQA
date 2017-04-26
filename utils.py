@@ -1,23 +1,23 @@
 import pickle
-import threading, re
+import threading
 from queue import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.misc
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
-dataDir = '/home/victor/VQA'
+dataDir = 'VQA'
 taskType = 'OpenEnded'
 dataType = 'mscoco'
-dataSubTypeTrain = 'train2014'
-AnnoSubTypeTrain = 'train2017'
+dataSubTypeTrain = 'val2014'
+AnnoSubTypeTrain = 'val2014'
 annFileTrain = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeTrain)
 quesFileTrain = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeTrain)
 imgDirTrain = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 featDirTrain = '%s/Features/%s/%s/' % (dataDir, dataType, dataSubTypeTrain)
 
 dataSubTypeVal = 'val2014'
-AnnoSubTypeVal = 'val2017'
+AnnoSubTypeVal = 'val2014'
 annFileVal = '%s/Annotations/%s_%s_annotations.json' % (dataDir, dataType, AnnoSubTypeVal)
 quesFileVal = '%s/Questions/%s_%s_%s_questions.json' % (dataDir, taskType, dataType, AnnoSubTypeVal)
 imgDirVal = '%s/Images/%s/%s/' % (dataDir, dataType, dataSubTypeVal)
@@ -44,49 +44,15 @@ class DataSet:
 		self.queue = Queue(maxsize=self.q_max)
 		self.counter = 0
 		self.num_threads = num_threads
-		self.colors = {
-			'white': 0,
-			'brown': 1,
-			'black': 2,
-			'blue': 3,
-			'red': 4,
-			'green': 5,
-			'pink': 6,
-			'beige': 7,
-			'clear': 8,
-			'yellow': 9,
-			'orange': 10,
-			'gray': 11,
-			'purple': 12,
-			'tan': 13,
-			'silver': 14,
-			'maroon': 15,
-			'gold': 16,
-			'blonde': 17,
-			'sepia': 18,
-			'plaid': 19,
-			0: 'white',
-			1: 'brown',
-			2: 'black',
-			3: 'blue',
-			4: 'red',
-			5: 'green',
-			6: 'pink',
-			7: 'beige',
-			8: 'clear',
-			9: 'yellow',
-			10: 'orange',
-			11: 'gray',
-			12: 'purple',
-			13: 'tan',
-			14: 'silver',
-			15: 'maroon',
-			16: 'gold',
-			17: 'blonde',
-			18: 'sepia',
-			19: 'plaid'
-		}
+		self.init_colors()
 		self.start()
+
+	def init_colors(self):
+		self.colors = {}
+		for color, id in enumerate(['white', 'brown', 'black', 'blue', 'red', 'green', 'pink', 'beige', 'clear', 'yellow',
+									'orange', 'gray', 'purple', 'tan', 'silver', 'maroon', 'gold', 'blonde', 'sepia', 'plaid']):
+			self.colors[color] = id
+			self.colors[id] = color
 
 	def start(self):
 		self.process_list = []
@@ -102,10 +68,11 @@ class DataSet:
 			proc.join(timeout=0.1)
 
 	def load_QA(self):
-		# annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196])
-		annIds = self.vqa.getQuesIds()
-		# if self.dataset_size is not None:
-		# 	annIds = annIds[:self.dataset_size]
+		annIds = self.vqa.getQuesIds(imgIds=[42, 74, 74, 133, 136, 139, 143, 164, 192, 196,
+											 208, 241, 257, 283, 285, 294, 328, 338, 357, 359])
+		# annIds = self.vqa.getQuesIds()
+		if self.dataset_size is not None:
+			annIds = annIds[:self.dataset_size]
 		return self.vqa.loadQA(annIds)
 
 	def index_to_color(self, id):
@@ -158,8 +125,6 @@ class DataSet:
 					Q = np.array([self.word2vec.word_to_index(word) for word in self.id_to_question(randomAnn['question_id'])])
 					A = self.word2vec.word_to_index(self.id_to_answer(randomAnn['question_id']))
 				except Exception as e:
-					#print("bad !" + str(e) + ", Orig Ques: " + str(self.vqa.qqa[randomAnn['question_id']]['question'][:-1].lower().split()) + ", Orig Answer: " + str(self.vqa.loadQA(randomAnn['question_id'])[0]['multiple_choice_answer']))
-					#print(self.vqa.loadQA(randomAnn['question_id'])[0]['multip'])
 					continue
 				if randomAnn['answer_type'] == 'yes/no':
 					type = 'b'
@@ -189,13 +154,6 @@ class DataSet:
 				Qs[type].append(Q)
 				As[type].append(A)
 
-				#print(type + ", Proc'd Ques: " + str(self.id_to_question(randomAnn['question_id'])) + ", Proc'd Answer: " + str(self.id_to_answer(randomAnn['question_id'])))
-
-
-
-			#print("m's: " + str(len(Qs['m'])) + ", n's: " + str(len(Qs['n'])) + ", b's: " + str(len(Qs['b'])))
-			#print(As['m'])
-			#print(Qs['m'])
 			self.queue.put((np.array(Anns['b']), Is['b'], np.array(Xs['b']), np.array(Qs['b']), np.array(As['b']),
 							np.array(Anns['n']), Is['n'], np.array(Xs['n']), np.array(Qs['n']), np.array(As['n']),
 							np.array(Anns['m']), Is['m'], np.array(Xs['m']), np.array(Qs['m']), np.array(As['m']),
