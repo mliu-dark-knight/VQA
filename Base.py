@@ -97,19 +97,19 @@ class Base(object):
 		predicts_tm, predicts_m, accuracy_m, predicts_tc, predicts_c, accuracy_c = self.test_batch(sess, batch)
 		(Anns_b, Is_b, _, _, _, Anns_n, Is_n, _, _, _, Anns_m, Is_m, _, _, _, Anns_c, Is_c, _, _, _) = batch
 		for predict, Ann, I in zip(predicts_b, Anns_b, Is_b):
-			eval_data.visualize(Ann, I)
+			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % ('yes' if predict == 1 else 'no'))
 		tqdm.write('Accuracy (yes/no): %f' % accuracy_b)
 		for predict, Ann, I in zip(predicts_b, Anns_n, Is_n):
-			eval_data.visualize(Ann, I)
+			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %d' % (predict))
 		tqdm.write('Accuracy (number): %f' % accuracy_n)
 		for predict, Ann, I in zip(predicts_c, Anns_c, Is_c):
-			eval_data.visualize(Ann, I)
+			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_color(predict))
 		tqdm.write('Accuracy (color): %f' % accuracy_c)
 		for predict, Ann, I in zip(predicts_m, Anns_m, Is_m):
-			eval_data.visualize(Ann, I)
+			# eval_data.visualize(Ann, I)
 			tqdm.write('Predicted answer: %s' % eval_data.index_to_word(predict))
 		tqdm.write('Accuracy (other): %f' % accuracy_m)
 

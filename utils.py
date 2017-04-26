@@ -4,6 +4,7 @@ from queue import Queue
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.misc
+from tqdm import tqdm
 from VQA.PythonHelperTools.vqaTools.vqa import VQA
 
 dataDir = 'VQA'
@@ -135,7 +136,7 @@ class DataSet:
 						A = int(self.id_to_answer(randomAnn['question_id']))
 						assert 0 <= A < self.params.num_range
 					except:
-						print('Number out of range!: ' + str(A))
+						# tqdm.write('Number out of range!: ' + str(A))
 						continue
 				elif 'color' in randomAnn['question_type']:
 					type = 'c'
@@ -143,7 +144,7 @@ class DataSet:
 					try:
 						A = self.colors[color]
 					except:
-						print('Unknown color: ' + color)
+						# tqdm.write('Unknown color: ' + color)
 						continue
 				else:
 					type = 'm'
@@ -191,7 +192,7 @@ class WordTable(object):
 	@staticmethod
 	def load_word2vec():
 		try:
-			word2vec = pickle.load(open('word2vec.cache', 'rb'))
+			word2vec = pickle.load(open('model/word2vec.cache', 'rb'))
 		except:
 			word2vec = WordTable()
 		return word2vec

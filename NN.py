@@ -51,7 +51,7 @@ def batch_norm(x, prefix, training):
 
 
 def dropout(x, keep_prob, training):
-	return tf.cond(training, lambda: tf.nn.dropout(x, keep_prob), lambda: x * keep_prob)
+	return tf.cond(training, lambda: tf.nn.dropout(x, keep_prob), x)
 
 
 
