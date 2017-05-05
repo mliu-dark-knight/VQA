@@ -1,4 +1,5 @@
 import math
+import tflearn
 import tensorflow as tf
 from functools import *
 
@@ -66,12 +67,8 @@ def conv1d(x, shape, stride, prefix, suffix='', activation='relu', bn=False):
 	return func[activation](l)
 
 
-def lrelu(x, alpha=0.1):
-	return tf.maximum(x * alpha, x)
-
-
 def fully_connected(input, num_neurons, prefix, suffix='', activation='lrelu', bn=False, training=None, type=None):
-	func = {'lrelu': lrelu, 'relu': tf.nn.relu, 'tanh': tf.nn.tanh, 'sigmoid': tf.nn.sigmoid, None: tf.identity}
+	func = {'lrelu': tflearn.activations.leaky_relu, 'relu': tf.nn.relu, 'tanh': tf.nn.tanh, 'sigmoid': tf.nn.sigmoid, None: tf.identity}
 	W = weight(prefix + '_W' + suffix, [input.get_shape().as_list()[1], num_neurons], init='he', type=type)
 	if bn:
 		l = batch_norm(tf.matmul(input, W), prefix, training)
