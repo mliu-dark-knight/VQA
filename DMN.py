@@ -175,8 +175,8 @@ class DMN(Base):
 		tf.summary.scalar('accuracy_t', self.accuracy_t)
 		tf.summary.scalar('accuracy_b', self.accuracy_b, collections=['b_stuff'])
 		tf.summary.scalar('accuracy_n', self.accuracy_n, collections=['n_stuff'])
-		tf.summary.scalar("accuracy_m", self.accuracy_m, collections=['m_stuff'])
-		tf.summary.scalar("accuracy_c", self.accuracy_c, collections=['c_stuff'])
+		tf.summary.scalar('accuracy_m', self.accuracy_m, collections=['m_stuff'])
+		tf.summary.scalar('accuracy_c', self.accuracy_c, collections=['c_stuff'])
 
 		tf.summary.scalar('loss_t', loss_t)
 		tf.summary.scalar('loss_b', loss_b, collections=['b_stuff'])
