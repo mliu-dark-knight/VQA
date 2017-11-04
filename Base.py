@@ -14,7 +14,7 @@ class Base(object):
 		self.starttime_init = time.time()
 
 		with tf.variable_scope('DMN'):
-			print("Building DMN...")
+			print('Building DMN...')
 			self.global_step = tf.Variable(0, name='global_step', trainable=False)
 			self.build()
 			self.saver = tf.train.Saver(tf.trainable_variables())
@@ -84,10 +84,6 @@ class Base(object):
 				self.train_batch(sess, batch, sum_writer)
 
 			self.eval(sess, val_data)
-			# if epoch % self.params.save_period == 0:
-			# 	self.save(sess)
-			# 	print('Saved! Current Epoch: ' + str(epoch) + ', Current Step: ' + str(step) + ", Total Time: " +
-			# 		  str(datetime.timedelta(seconds=(time.time() - self.starttime_init))))
 
 		print('Training complete.')
 
